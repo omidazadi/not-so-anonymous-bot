@@ -1,0 +1,33 @@
+{
+    "home": {
+        "hidden-start": "/start",
+        "hidden-admin": "پیس پیس",
+        "send-message": "ارسال پیام ناشناس"
+    },
+    "sending": {
+        "hidden-start": "/start",
+        "discard": "لغو"
+    },
+    "admin-auth": {
+        "hidden-start": "/start",
+        "back": "برگشت"
+    },
+    "admin-home": {
+        "hidden-start": "/start",
+        "exit": "خروج از پنل مدیریت",
+        "refresh": "بروزسازی",
+        "pending-list": "فهرست پیام‌های بازبینی‌نشده"
+    },
+    "pending-list": {
+        "hidden-start": "/start",
+        "back": "برگشت",
+        "next": "بعدی",
+        "previous": "قبلی"
+    },
+    "message-review": {
+        "hidden-start": "/start",
+        "back": "برگشت",
+        "accept": "\\U00002714",
+        "reject": "\\U0000274c"
+    }
+}
