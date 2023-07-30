@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS message (
 CREATE TABLE IF NOT EXISTS user_status (
     telegram_id TEXT NOT NULL PRIMARY KEY,
     state TEXT NOT NULL,
-    extra TEXT NOT NULL,
-    no_messages INT NOT NULL
+    extra TEXT,
+    no_messages INT NOT NULL,
+    last_message_at TEXT
 ) WITHOUT ROWID;

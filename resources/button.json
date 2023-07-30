@@ -14,6 +14,7 @@
     },
     "admin-home": {
         "hidden-start": "/start",
+        "hidden-omidi": "امیدی",
         "exit": "خروج از پنل مدیریت",
         "refresh": "بروزسازی",
         "pending-list": "فهرست پیام‌های بازبینی‌نشده"
@@ -27,7 +28,7 @@
     "message-review": {
         "hidden-start": "/start",
         "back": "برگشت",
-        "accept": "\\U00002714",
-        "reject": "\\U0000274c"
+        "accept": "\u2714",
+        "reject": "\u274c"
     }
 }
