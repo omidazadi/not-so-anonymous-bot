@@ -1,9 +1,12 @@
 class UserStatus:
-    def __init__(self, telegram_id, state, extra, no_messages, last_message_at):
-        self.telegram_id = telegram_id
+    def __init__(self, user_id, user_tid, is_admin, mask_name, is_masked, state, extra, last_message_at):
+        self.user_id = user_id
+        self.user_tid = user_tid
+        self.is_admin = is_admin
+        self.mask_name = mask_name
+        self.is_masked = is_masked
         self.state = state
         self.extra = extra
-        self.no_messages = no_messages
         self.last_message_at = last_message_at
 
     @staticmethod

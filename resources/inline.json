@@ -1,0 +1,27 @@
+{
+    "channel-message": {
+        "buttons": [["reply"]],
+        "reply": {
+            "text": "به این ناشناس پاسخ بده. 📝",
+            "data_header": "rep_ch"
+        }
+    },
+    "user-message-preview": {
+        "buttons": [["send", "discard"]],
+        "send": {
+            "text": "بفرست ✅",
+            "data_header": "ump_s"
+        },
+        "discard": {
+            "text": "نفرست ❌",
+            "data_header": "ump_d"
+        }
+    },
+    "user-message-approved": {
+        "buttons": [["close"]],
+        "close": {
+            "text": "پاسخ‌های این پیام را ببند. ✋",
+            "data_header": "close_rep"
+        }
+    }
+}
