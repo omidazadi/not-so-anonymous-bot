@@ -1,0 +1,21 @@
+{#
+    state: pending_list
+    kws: button_messages, messages
+#}
+[
+    [
+        "{{ button_messages['pending_list']['next'] }}",
+        "{{ button_messages['pending_list']['previous'] }}"
+    ],
+    {% if messages | length > 0 %}
+    [
+        {% for message in messages %}
+        "{{ message.channel_message_id }}"{% if not loop.last %},
+        {% endif %}
+        {% endfor %}
+    ],
+    {% endif %}
+    [
+        "{{ button_messages['pending_list']['back'] }}"
+    ]
+]

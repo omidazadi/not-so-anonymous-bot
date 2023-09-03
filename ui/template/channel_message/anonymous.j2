@@ -1,0 +1,9 @@
+{#
+    type: anonymous
+    kws: user_status, message, channel_id
+#}
+**{% if not user_status.is_veiled %}ناشناس{% else %}{{ user_status.veil }}{% endif %}**:
+
+{{ message }}
+
+@{{ channel_id }}

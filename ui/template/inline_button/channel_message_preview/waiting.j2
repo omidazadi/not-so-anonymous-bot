@@ -1,0 +1,17 @@
+{#
+    type: channel_message_preview
+    senario: waiting
+    kws: channel_message_id
+#}
+[
+    [
+        {
+            "text": "بفرست ✅",
+            "data": "cmp,w,s,{{ channel_message_id }}"
+        },
+        {
+            "text": "نفرست ❌",
+            "data": "cmp,w,d,{{ channel_message_id }}"
+        }
+    ]
+]

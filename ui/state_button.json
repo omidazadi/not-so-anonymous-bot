@@ -1,0 +1,38 @@
+{
+    "home": {
+        "hidden_start": "/start",
+        "hidden_admin": "پیس پیس",
+        "send_message": "ارسال پیام ناشناس 📜",
+        "put_on_veil": "نقاب بذار 👹",
+        "take_off_veil": "نقابت رو بردار 👹",
+        "talk_to_admin": "گفت‌وگو با ادمین 👨‍💻"
+    },
+    "sending": {
+        "hidden_start": "/start",
+        "discard": "لغو 🔙"
+    },
+    "admin_auth": {
+        "hidden_start": "/start",
+        "back": "برگشت 🔙"
+    },
+    "admin_home": {
+        "hidden_start": "/start",
+        "hidden_omidi": "امیدی",
+        "exit": "خروج از پنل مدیریت 🚪",
+        "refresh": "بروزسازی 🔄",
+        "pending_list": "فهرست پیام‌های بازبینی‌نشده 🗃️",
+        "veil_menu": "منوی نقاب‌ها 👹"
+    },
+    "pending_list": {
+        "hidden_start": "/start",
+        "back": "برگشت 🔙",
+        "next": "بعدی ⬅️",
+        "previous": "قبلی ➡️"
+    },
+    "message_review": {
+        "hidden_start": "/start",
+        "back": "برگشت 🔙",
+        "accept": "✅",
+        "reject": "❌"
+    }
+}

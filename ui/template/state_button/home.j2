@@ -1,0 +1,13 @@
+{#
+    state: home
+    kws: button_messages, user_status
+#}
+[
+    [
+        "{{ button_messages['home']['send_message'] }}"
+    ],
+    [
+        {%+ if not user_status.is_veiled %}"{{ button_messages['home']['take_off_veil'] }}"{% else %}"{{ button_messages['home']['put_on_veil'] }}"{% endif %},
+        "{{ button_messages['home']['talk_to_admin'] }}"
+    ]
+]

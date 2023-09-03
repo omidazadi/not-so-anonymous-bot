@@ -1,0 +1,23 @@
+{#
+    state: pending_list
+    edge: main
+    kws: current_page, total_page, preview_length, messages
+#}
+{% if messages | length == 0 %}
+هیچ پیامی نیست!
+{% else %}
+صفحه‌ی {{ current_page }} از {{ total_page }}:
+
+{% for message in messages %}
+پیام شماره‌ی {{ message.channel_message_id }} [مدیا **{% if message.media != None %}دارد{% else %}ندارد{% endif %}**]:
+
+{% if message | length > preview_length %}
+__{{ message.message[0:preview_length] }}__
+{% else %}
+__{{ message.message }}__
+{% endif %}
+{% if not loop.last %}
+
+{% endif%}
+{% endfor %}
+{% endif%}

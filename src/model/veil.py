@@ -1,4 +1,4 @@
-class IndianName:
+class Veil:
     def __init__(self, name):
         self.name = name
     
@@ -6,5 +6,5 @@ class IndianName:
     def cook(db_result):
         result = []
         for row in db_result:
-            result.append(IndianName(*row))
+            result.append(Veil(*row))
         return result

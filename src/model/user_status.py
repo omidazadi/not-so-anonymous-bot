@@ -1,10 +1,10 @@
 class UserStatus:
-    def __init__(self, user_id, user_tid, is_admin, mask_name, is_masked, state, extra, last_message_at):
+    def __init__(self, user_id, user_tid, gen_is_admin, veil, is_veiled, state, extra, last_message_at):
         self.user_id = user_id
         self.user_tid = user_tid
-        self.is_admin = is_admin
-        self.mask_name = mask_name
-        self.is_masked = is_masked
+        self.gen_is_admin = gen_is_admin
+        self.veil = veil
+        self.is_veiled = is_veiled
         self.state = state
         self.extra = extra
         self.last_message_at = last_message_at
