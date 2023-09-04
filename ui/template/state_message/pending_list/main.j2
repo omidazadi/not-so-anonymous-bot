@@ -11,8 +11,8 @@
 {% for message in messages %}
 پیام شماره‌ی {{ message.channel_message_id }} [مدیا **{% if message.media != None %}دارد{% else %}ندارد{% endif %}**]:
 
-{% if message | length > preview_length %}
-__{{ message.message[0:preview_length] }}__
+{% if message.message | length > preview_length %}
+__{{ message.message[0:preview_length] }}...__
 {% else %}
 __{{ message.message }}__
 {% endif %}

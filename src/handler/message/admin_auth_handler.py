@@ -6,7 +6,7 @@ from model.user_status import UserStatus
 from repository.user_status_repo import UserStatusRepo
 from repository.channel_message_repo import ChannelMessageRepo
 from repository.admin_repo import AdminRepo
-from neo_frontend import Frontend
+from frontend import Frontend
 from config import Config
 from constant import Constant
 

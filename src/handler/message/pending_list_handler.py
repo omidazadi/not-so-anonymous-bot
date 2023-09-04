@@ -4,7 +4,7 @@ from telethon import TelegramClient
 from model.user_status import UserStatus
 from repository.user_status_repo import UserStatusRepo
 from repository.channel_message_repo import ChannelMessageRepo
-from neo_frontend import Frontend
+from frontend import Frontend
 from mixin.paginated_pending_list_mixin import PaginatedPendingListMixin
 from config import Config
 from constant import Constant
@@ -21,7 +21,7 @@ class PendingListHandler(PaginatedPendingListMixin):
         self.channel_message_repo: ChannelMessageRepo = channel_message_repo
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):
-        self.logger.info(f'pending-list handler!')
+        self.logger.info(f'pending_list handler!')
 
         input_sender = event.message.input_sender
         if event.message.message == self.button_messages['pending_list']['hidden_start'] or \
@@ -56,13 +56,18 @@ class PendingListHandler(PaginatedPendingListMixin):
                     user_status.extra = f'{str(channel_message.channel_message_id)},{user_status.extra}'
                     await self.user_status_repo.set_user_status(user_status, db_connection)
                     await self.frontend.send_state_message(input_sender, 
-                                                   'message_review', 'main', { 'user_status': user_status, 'message': channel_message.message },
-                                                   'message_review', { 'button_messages': self.button_messages })
+                                                           'message_review', 'main', { 'user_status': user_status, 'message': channel_message.message },
+                                                           'message_review', { 'button_messages': self.button_messages },
+                                                            media=channel_message.media)
                 else:
+                    messages, total_pages = await self.get_paginated_pending_messages(user_status, db_connection)
+                    await self.user_status_repo.set_user_status(user_status, db_connection)
                     await self.frontend.send_state_message(input_sender, 
-                                                   'pending_list', 'not_found', {},
-                                                    None, None)
+                                                           'pending_list', 'not_found', {},
+                                                           'pending_list', { 'button_messages': self.button_messages, 'messages': messages })
             else:
+                messages, total_pages = await self.get_paginated_pending_messages(user_status, db_connection)
+                await self.user_status_repo.set_user_status(user_status, db_connection)
                 await self.frontend.send_state_message(input_sender, 
-                                                   'pending_list', 'not_found', {},
-                                                    None, None)
+                                                       'pending_list', 'not_found', {},
+                                                       'pending_list', { 'button_messages': self.button_messages, 'messages': messages })

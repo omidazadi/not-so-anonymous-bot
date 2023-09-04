@@ -1,8 +1,10 @@
 {#
     type: channel_message_preview
-    senario: waiting
+    senario: approved_closed
     kws: user_status, message
 #}
 **{% if not user_status.is_veiled %}ناشناس{% else %}{{ user_status.veil }}{% endif %}**:
 
 {{ message }}
+
+وضعیت پیام: تاییدشده ✅🔒

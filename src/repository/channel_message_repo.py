@@ -24,6 +24,7 @@ class ChannelMessageRepo:
     async def set_channel_message_tid(self, channel_message_id, message_tid, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
+
         sql_statement = """
             UPDATE channel_message SET message_tid = %s WHERE message_tid = "?" AND channel_message_id = %s;
         """
@@ -45,6 +46,17 @@ class ChannelMessageRepo:
         is_ok = (True if cursor.rowcount > 0 else False)
         await cursor.close()
         return is_ok
+    
+    async def close_reply(self, channel_message_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            UPDATE channel_message SET can_reply = FALSE WHERE verdict = "a" AND channel_message_id = %s;
+        """
+        values = (channel_message_id,)
+        await cursor.execute(sql_statement, values)
+        await cursor.close()
     
     async def send_the_waiting_channel_message(self, channel_message_id, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
@@ -77,6 +89,7 @@ class ChannelMessageRepo:
     async def get_no_pending_messages(self, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
+
         sql_statement = """
             SELECT COUNT(*) FROM channel_message WHERE verdict = "p";
         """
@@ -89,6 +102,7 @@ class ChannelMessageRepo:
     async def get_pending_messages_sorted(self, offset, limit, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
+
         sql_statement = """
             SELECT * FROM channel_message WHERE verdict = "p" ORDER BY channel_message_id DESC LIMIT %s OFFSET %s;
         """
@@ -101,6 +115,7 @@ class ChannelMessageRepo:
     async def get_channel_message(self, channel_message_id, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
+        
         sql_statement = """
             SELECT * FROM channel_message WHERE channel_message_id = %s;
         """

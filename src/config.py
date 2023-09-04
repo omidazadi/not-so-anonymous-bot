@@ -4,6 +4,7 @@ class Config:
     def __init__(self):
         self.app = Config.App()
         self.channel = Config.Channel()
+        self.bot = Config.Bot()
         self.telegram = Config.Telegram()
         self.mysql = Config.Mysql()
     
@@ -16,6 +17,10 @@ class Config:
         def __init__(self):
             self.id: str = os.getenv('CHANNEL_ID')
             self.admin: str = os.getenv('CHANNEL_ADMIN')
+
+    class Bot:
+        def __init__(self):
+            self.id: str = os.getenv('BOT_ID')
 
     class Telegram:
         def __init__(self):

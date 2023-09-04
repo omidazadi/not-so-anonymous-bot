@@ -5,7 +5,7 @@ from telethon import TelegramClient
 from model.user_status import UserStatus
 from repository.user_status_repo import UserStatusRepo
 from repository.channel_message_repo import ChannelMessageRepo
-from neo_frontend import Frontend
+from frontend import Frontend
 from config import Config
 from constant import Constant
 from helper import utf8len
@@ -62,16 +62,15 @@ class SendingHandler:
                 return
             
             media_stream = pickle.dumps(media)
-
             channel_message_id = await self.channel_message_repo.create_channel_message(user_status.user_id, event.message.message, media_stream, db_connection)
-            
             message_tid = str(await self.frontend.send_inline_message(input_sender, 'channel_message_preview', 'waiting', 
                                                                       { 'user_status': user_status, 'message': event.message.message },
-                                                                      { 'channel_message_id': channel_message_id }))
+                                                                      { 'channel_message_id': channel_message_id },
+                                                                      media=media))
             await self.channel_message_repo.set_channel_message_tid(channel_message_id, message_tid, db_connection)
             user_status.state = 'home'
             await self.user_status_repo.set_user_status(user_status, db_connection)
             await self.frontend.send_state_message(input_sender, 
                                                    'sending', 'confirmation', {},
-                                                  'home', { 'button_messages': self.button_messages, 'user_status': user_status },
-                                                  reply_to=message_tid)
+                                                   'home', { 'button_messages': self.button_messages, 'user_status': user_status },
+                                                   reply_to=message_tid)
