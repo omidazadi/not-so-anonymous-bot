@@ -24,17 +24,15 @@ CREATE TABLE IF NOT EXISTS peer_message (
     from_message_tid VARCHAR(50) NOT NULL,
     to_message_tid VARCHAR(50) NOT NULL,
     from_user INT NOT NULL,
-    to_user INT NOT NULL,
     message TEXT NOT NULL,
     media BLOB NOT NULL,
+    condition CHAR(1) NOT NULL,
     sent_at TIMESTAMP NOT NULL,
     CONSTRAINT fk_channel_message_reply FOREIGN KEY (channel_message_reply)
         REFERENCES channel_message(channel_message_id),
     CONSTRAINT fk_peer_message_reply FOREIGN KEY (peer_message_reply)
         REFERENCES peer_message(peer_message_id),
     CONSTRAINT fk_from_user_2 FOREIGN KEY (from_user)
-        REFERENCES user_status(user_id),
-    CONSTRAINT fk_to_user FOREIGN KEY (to_user)
         REFERENCES user_status(user_id),
     CONSTRAINT chk_reply CHECK (
         (channel_message_reply = NULL AND peer_message_reply != NULL) OR 

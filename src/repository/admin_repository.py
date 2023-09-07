@@ -2,7 +2,7 @@ import logging
 import aiomysql
 from model.admin import Admin
 
-class AdminRepo:
+class AdminRepository:
     def __init__(self):
         self.logger = logging.getLogger('not_so_anonymous')
 

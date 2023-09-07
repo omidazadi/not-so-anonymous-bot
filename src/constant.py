@@ -11,6 +11,7 @@ class Constant:
     
     class Limit:
         def __init__(self):
-            self.rate_limit: int = 0
+            self.rate_limit: int = 30
+            self.channel_reply_limit: int = 3
             self.simple_message_size: int = 2048
             self.media_message_size: int = 512

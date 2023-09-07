@@ -3,7 +3,7 @@ import logging
 import aiomysql
 from model.channel_message import ChannelMessage
 
-class ChannelMessageRepo:
+class ChannelMessageRepository:
     def __init__(self):
         self.logger = logging.getLogger('not_so_anonymous')
 
@@ -126,3 +126,14 @@ class ChannelMessageRepo:
         if result == None:
             return None
         return ChannelMessage(*result)
+    
+    async def close_reply(self, channel_message_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            UPDATE channel_message SET can_reply = FALSE WHERE channel_message_id = %s;
+        """
+        values = (channel_message_id,)
+        await cursor.execute(sql_statement, values)
+        await cursor.close()

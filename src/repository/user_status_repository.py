@@ -2,7 +2,7 @@ import logging
 import aiomysql
 from model.user_status import UserStatus
 
-class UserStatusRepo:
+class UserStatusRepository:
     def __init__(self):
         self.logger = logging.getLogger('not_so_anonymous')
 

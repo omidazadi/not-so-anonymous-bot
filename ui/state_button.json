@@ -34,5 +34,9 @@
         "back": "برگشت 🔙",
         "accept": "✅",
         "reject": "❌"
+    },
+    "channel_reply": {
+        "hidden_start": "/start",
+        "discard": "لغو 🔙"
     }
 }

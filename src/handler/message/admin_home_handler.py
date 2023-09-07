@@ -1,32 +1,30 @@
 import logging
 import aiomysql
-from telethon import TelegramClient
 from model.user_status import UserStatus
-from repository.user_status_repo import UserStatusRepo
-from repository.channel_message_repo import ChannelMessageRepo
-from frontend import Frontend
 from mixin.paginated_pending_list_mixin import PaginatedPendingListMixin
-from config import Config
-from constant import Constant
+from handler.message.base_handler import BaseHandler
 
-class AdminHomeHandler(PaginatedPendingListMixin):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, user_status_repo, channel_message_repo):
+class AdminHomeHandler(PaginatedPendingListMixin, BaseHandler):
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
         self.logger = logging.getLogger('not_so_anonymous')
-        self.config: Config = config
-        self.constant: Constant = constant
-        self.telethon_bot: TelegramClient = telethon_bot
-        self.button_messages = button_messages
-        self.frontend: Frontend = frontend
-        self.user_status_repo: UserStatusRepo = user_status_repo
-        self.channel_message_repo: ChannelMessageRepo = channel_message_repo
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):
         self.logger.info(f'admin_home handler!')
 
         input_sender = event.message.input_sender
-        if event.message.message == self.button_messages['admin_home']['hidden_start'] or \
-            event.message.message == self.button_messages['admin_home']['refresh']:
-            no_pending_messages = await self.channel_message_repo.get_no_pending_messages(db_connection)
+        if (event.message.message == self.button_messages['admin_home']['hidden_start'] or
+            event.message.message.startswith(self.button_messages['admin_home']['hidden_start'] + ' ')):
+            data = self.parse_hidden_start(event.message.message)
+            if data == None:
+                no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
+                await self.frontend.send_state_message(input_sender, 
+                                                       'admin_home', 'main', { 'no_pending_messages': no_pending_messages },
+                                                       'admin_home', { 'button_messages': self.button_messages })
+            else:
+                await self.goto_channel_reply_state(input_sender, 'admin_home', data, user_status, db_connection)
+        elif event.message.message == self.button_messages['admin_home']['refresh']:
+            no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
             await self.frontend.send_state_message(input_sender, 
                                                    'admin_home', 'main', { 'no_pending_messages': no_pending_messages },
                                                    'admin_home', { 'button_messages': self.button_messages })
@@ -36,7 +34,7 @@ class AdminHomeHandler(PaginatedPendingListMixin):
                                                    'admin_home', { 'button_messages': self.button_messages })
         elif event.message.message == self.button_messages['admin_home']['exit']:
             user_status.state = 'home'
-            await self.user_status_repo.set_user_status(user_status, db_connection)
+            await self.repository.user_status.set_user_status(user_status, db_connection)
             await self.frontend.send_state_message(input_sender, 
                                                    'home', 'main', { 'user_status': user_status, 'channel_id': self.config.channel.id },
                                                    'home', { 'button_messages': self.button_messages, 'user_status': user_status })
@@ -44,7 +42,7 @@ class AdminHomeHandler(PaginatedPendingListMixin):
             user_status.state = 'pending_list'
             user_status.extra = '1'
             messages, total_pages = await self.get_paginated_pending_messages(user_status, db_connection)
-            await self.user_status_repo.set_user_status(user_status, db_connection)
+            await self.repository.user_status.set_user_status(user_status, db_connection)
             await self.frontend.send_state_message(input_sender, 
                                                    'pending_list', 'main', { 'current_page': int(user_status.extra), 'total_page': total_pages, 'preview_length': self.constant.view.pending_list_preview_length, 'messages': messages },
                                                    'pending_list', { 'button_messages': self.button_messages, 'messages': messages })
@@ -52,5 +50,3 @@ class AdminHomeHandler(PaginatedPendingListMixin):
             await self.frontend.send_state_message(input_sender, 
                                                    'common', 'unknown', {},
                                                    'admin_home', { 'button_messages': self.button_messages })
-            
-            # current_page, total_page, preview_length, messages

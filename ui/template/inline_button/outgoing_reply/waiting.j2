@@ -1,0 +1,17 @@
+{#
+    type: outgoing_reply
+    senario: waiting
+    kws: peer_message_id
+#}
+[
+    [
+        {
+            "text": "بفرست ✅",
+            "data": "or,w,s,{{ peer_message_id }}"
+        },
+        {
+            "text": "نفرست ❌",
+            "data": "or,w,d,{{ peer_message_id }}"
+        }
+    ]
+]

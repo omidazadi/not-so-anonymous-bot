@@ -4,16 +4,16 @@ import aiomysql
 from telethon import TelegramClient, events
 from frontend import Frontend
 from repository.database_manager import DatabaseManager
-from repository.admin_repo import AdminRepo
-from repository.channel_message_repo import ChannelMessageRepo
-from repository.user_status_repo import UserStatusRepo
+from repository.repository import Repository
 from handler.message.home_handler import HomeHandler
 from handler.message.sending_handler import SendingHandler
 from handler.message.admin_auth_handler import AdminAuthHandler
 from handler.message.admin_home_handler import AdminHomeHandler
 from handler.message.pending_list_handler import PendingListHandler
 from handler.message.message_review_handler import MessageReviewHandler
+from handler.message.channel_reply_handler import ChannelReplyHandler
 from handler.callback.channel_message_preview_handler import ChannelMessagePreviewHandler
+from handler.callback.outgoing_reply_handler import OutgoingReplyHandler
 from config import Config
 from constant import Constant
 
@@ -29,27 +29,29 @@ class Bot:
                                                                  base_logger=logging.getLogger('telethon')).start(bot_token=self.config.telegram.bot_token)
         self.database_manager = DatabaseManager(self.config.mysql)
         await self.database_manager.initialize()
-        self.admin_repo = AdminRepo()
-        self.channel_message_repo = ChannelMessageRepo()
-        self.user_status_repo = UserStatusRepo()
+        self.repository = Repository()
 
         self.frontend = Frontend(self.telethon_bot, self.config, self.constant)
         self.button_messages = json.load(open('ui/state_button.json', 'r', encoding='utf-8'))
 
         self.home_handler = HomeHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                        self.user_status_repo)
+                                        self.repository)
         self.sending_handler = SendingHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                              self.user_status_repo, self.channel_message_repo)
+                                              self.repository)
         self.admin_auth_handler = AdminAuthHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                   self.user_status_repo, self.channel_message_repo, self.admin_repo)
+                                                   self.repository)
         self.admin_home_handler = AdminHomeHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                   self.user_status_repo, self.channel_message_repo)
+                                                   self.repository)
         self.pending_list_handler = PendingListHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                       self.user_status_repo, self.channel_message_repo)
+                                                       self.repository)
         self.message_review_handler = MessageReviewHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                           self.user_status_repo, self.channel_message_repo)
+                                                           self.repository)
+        self.channel_reply_handler = ChannelReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                         self.repository)
         self.channel_message_preview_handler = ChannelMessagePreviewHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                                            self.user_status_repo, self.channel_message_repo)
+                                                                            self.repository)
+        self.outgoing_reply_handler = OutgoingReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                           self.repository)
 
         self.hook_handler_to_telethon()
 
@@ -70,6 +72,9 @@ class Bot:
             try:
                 if inline_type == 'cmp':
                     await self.channel_message_preview_handler.handle(inline_senario, inline_button, data, db_connection)
+                elif inline_type == 'or':
+                    await self.outgoing_reply_handler.handle(inline_senario, inline_button, data, db_connection)
+
                 await self.database_manager.commit_connection(db_connection)
 
                 self.logger.info('Callback has been handled!')
@@ -96,10 +101,10 @@ class Bot:
 
             try:
                 user_tid = str(event.message.input_sender.user_id)
-                user_status = await self.user_status_repo.get_user_status_by_tid(user_tid, db_connection)
+                user_status = await self.repository.user_status.get_user_status_by_tid(user_tid, db_connection)
                 if user_status == None:
-                    await self.user_status_repo.create_user_status(user_tid, db_connection)
-                    user_status = await self.user_status_repo.get_user_status_by_tid(user_tid, db_connection)
+                    await self.repository.user_status.create_user_status(user_tid, db_connection)
+                    user_status = await self.repository.user_status.get_user_status_by_tid(user_tid, db_connection)
 
                 if user_status.state == 'home':
                     await self.home_handler.handle(user_status, event, db_connection)
@@ -113,6 +118,8 @@ class Bot:
                     await self.pending_list_handler.handle(user_status, event, db_connection)
                 elif user_status.state == 'message_review':
                     await self.message_review_handler.handle(user_status, event, db_connection)
+                elif user_status.state == 'channel_reply':
+                    await self.channel_reply_handler.handle(user_status, event, db_connection)
 
                 await self.database_manager.commit_connection(db_connection)
 
