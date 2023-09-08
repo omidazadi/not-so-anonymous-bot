@@ -13,10 +13,25 @@ class PeerMessageRepository:
 
         now_date = datetime.utcnow()
         sql_statement = """
-            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, condition, sent_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, message_status, sent_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
         values = (channel_message_reply, None, '?', '?', user_id, message, media, 'w', now_date)
+        await cursor.execute(sql_statement, values)
+        peer_message_id = cursor.lastrowid
+        await cursor.close()
+        return peer_message_id
+    
+    async def create_peer_peer_message(self, peer_message_reply, user_id, message, media, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        now_date = datetime.utcnow()
+        sql_statement = """
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, message_status, sent_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """
+        values = (None, peer_message_reply, '?', '?', user_id, message, media, 'w', now_date)
         await cursor.execute(sql_statement, values)
         peer_message_id = cursor.lastrowid
         await cursor.close()
@@ -88,7 +103,7 @@ class PeerMessageRepository:
         cursor: aiomysql.Cursor = await db_connection.cursor()
 
         sql_statement = """
-            UPDATE peer_message SET condition = "z" WHERE condition = "w" AND peer_message_id = %s;
+            UPDATE peer_message SET message_status = "z" WHERE message_status = "w" AND peer_message_id = %s;
         """
         values = (peer_message_id,)
         await cursor.execute(sql_statement, values)
@@ -102,7 +117,21 @@ class PeerMessageRepository:
         cursor: aiomysql.Cursor = await db_connection.cursor()
 
         sql_statement = """
-            DELETE FROM peer_message_id WHERE condition = "w" AND peer_message_id = %s;
+            DELETE FROM peer_message WHERE message_status = "w" AND peer_message_id = %s;
+        """
+        values = (peer_message_id,)
+        await cursor.execute(sql_statement, values)
+        
+        is_ok = (True if cursor.rowcount > 0 else False)
+        await cursor.close()
+        return is_ok
+    
+    async def seen_peer_message(self, peer_message_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            UPDATE peer_message SET message_status = "s" WHERE message_status = "z" AND peer_message_id = %s;
         """
         values = (peer_message_id,)
         await cursor.execute(sql_statement, values)

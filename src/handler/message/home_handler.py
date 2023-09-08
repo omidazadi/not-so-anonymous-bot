@@ -47,7 +47,7 @@ class HomeHandler(RateLimitMixin, BaseHandler):
                                                            'home', { 'button_messages': self.button_messages, 'user_status': user_status })
             else:
                 await self.frontend.send_state_message(input_sender, 
-                                                       'home', 'must_be_a_member', { 'channel_id': self.config.channel.id },
+                                                       'common', 'must_be_a_member', { 'channel_id': self.config.channel.id },
                                                        'home', { 'button_messages': self.button_messages, 'user_status': user_status })
         else:
             await self.frontend.send_state_message(input_sender, 

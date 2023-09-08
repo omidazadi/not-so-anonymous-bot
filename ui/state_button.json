@@ -38,5 +38,9 @@
     "channel_reply": {
         "hidden_start": "/start",
         "discard": "لغو 🔙"
+    },
+    "peer_reply": {
+        "hidden_start": "/start",
+        "discard": "لغو 🔙"
     }
 }

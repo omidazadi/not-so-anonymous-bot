@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import json
 import aiomysql
@@ -12,8 +13,10 @@ from handler.message.admin_home_handler import AdminHomeHandler
 from handler.message.pending_list_handler import PendingListHandler
 from handler.message.message_review_handler import MessageReviewHandler
 from handler.message.channel_reply_handler import ChannelReplyHandler
+from handler.message.peer_reply_handler import PeerReplyHandler
 from handler.callback.channel_message_preview_handler import ChannelMessagePreviewHandler
 from handler.callback.outgoing_reply_handler import OutgoingReplyHandler
+from handler.callback.incoming_reply_handler import IncomingReplyHandler
 from config import Config
 from constant import Constant
 
@@ -24,6 +27,7 @@ class Bot:
 
     async def initialize(self):
         self.logger = logging.getLogger('not_so_anonymous')
+        self.locks: dict[str, asyncio.Lock] = dict()
 
         self.telethon_bot: TelegramClient = await TelegramClient('bot', self.config.telegram.api_id, self.config.telegram.api_hash, 
                                                                  base_logger=logging.getLogger('telethon')).start(bot_token=self.config.telegram.bot_token)
@@ -48,9 +52,13 @@ class Bot:
                                                            self.repository)
         self.channel_reply_handler = ChannelReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
                                                          self.repository)
+        self.peer_reply_handler = PeerReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                   self.repository)
         self.channel_message_preview_handler = ChannelMessagePreviewHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
                                                                             self.repository)
         self.outgoing_reply_handler = OutgoingReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                           self.repository)
+        self.incoming_reply_handler = IncomingReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
                                                            self.repository)
 
         self.hook_handler_to_telethon()
@@ -70,14 +78,25 @@ class Bot:
             db_connection = await self.database_manager.open_connection()
 
             try:
-                if inline_type == 'cmp':
-                    await self.channel_message_preview_handler.handle(inline_senario, inline_button, data, db_connection)
-                elif inline_type == 'or':
-                    await self.outgoing_reply_handler.handle(inline_senario, inline_button, data, db_connection)
+                user_tid = str(event.original_update.user_id)
+                if not user_tid in self.locks:
+                    self.locks[user_tid] = asyncio.Lock()
+                async with self.locks[user_tid]:
+                    user_status = await self.repository.user_status.get_user_status_by_tid(user_tid, db_connection)
+                    if user_status == None:
+                        await self.repository.user_status.create_user_status(user_tid, db_connection)
+                        user_status = await self.repository.user_status.get_user_status_by_tid(user_tid, db_connection)
 
-                await self.database_manager.commit_connection(db_connection)
+                    if inline_type == 'cmp':
+                        await self.channel_message_preview_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
+                    elif inline_type == 'or':
+                        await self.outgoing_reply_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
+                    elif inline_type == 'ir':
+                        await self.incoming_reply_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
 
-                self.logger.info('Callback has been handled!')
+                    await self.database_manager.commit_connection(db_connection)
+
+                    self.logger.info('Callback has been handled!')
             except Exception as e:
                 await self.database_manager.rollback_connection(db_connection)
                 raise e
@@ -101,29 +120,35 @@ class Bot:
 
             try:
                 user_tid = str(event.message.input_sender.user_id)
-                user_status = await self.repository.user_status.get_user_status_by_tid(user_tid, db_connection)
-                if user_status == None:
-                    await self.repository.user_status.create_user_status(user_tid, db_connection)
+                if not user_tid in self.locks:
+                    self.locks[user_tid] = asyncio.Lock()
+                
+                async with self.locks[user_tid]:
                     user_status = await self.repository.user_status.get_user_status_by_tid(user_tid, db_connection)
+                    if user_status == None:
+                        await self.repository.user_status.create_user_status(user_tid, db_connection)
+                        user_status = await self.repository.user_status.get_user_status_by_tid(user_tid, db_connection)
 
-                if user_status.state == 'home':
-                    await self.home_handler.handle(user_status, event, db_connection)
-                elif user_status.state == 'sending':
-                    await self.sending_handler.handle(user_status, event, db_connection)
-                elif user_status.state == 'admin_auth':
-                    await self.admin_auth_handler.handle(user_status, event, db_connection)
-                elif user_status.state == 'admin_home':
-                    await self.admin_home_handler.handle(user_status, event, db_connection)
-                elif user_status.state == 'pending_list':
-                    await self.pending_list_handler.handle(user_status, event, db_connection)
-                elif user_status.state == 'message_review':
-                    await self.message_review_handler.handle(user_status, event, db_connection)
-                elif user_status.state == 'channel_reply':
-                    await self.channel_reply_handler.handle(user_status, event, db_connection)
+                    if user_status.state == 'home':
+                        await self.home_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'sending':
+                        await self.sending_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'admin_auth':
+                        await self.admin_auth_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'admin_home':
+                        await self.admin_home_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'pending_list':
+                        await self.pending_list_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'message_review':
+                        await self.message_review_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'channel_reply':
+                        await self.channel_reply_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'peer_reply':
+                        await self.peer_reply_handler.handle(user_status, event, db_connection)
 
-                await self.database_manager.commit_connection(db_connection)
+                    await self.database_manager.commit_connection(db_connection)
 
-                self.logger.info(f'Request has been completed!')
+                    self.logger.info(f'Request has been completed!')
             except Exception as e:
                 await self.database_manager.rollback_connection(db_connection)
                 await self.frontend.send_state_message(event.message.input_sender, 

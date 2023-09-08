@@ -2,19 +2,23 @@ from datetime import datetime
 import pickle
 import logging
 import aiomysql
+from model.user_status import UserStatus
 from handler.callback.base_handler import BaseHandler
 from mixin.rate_limit_mixin import RateLimitMixin
 
 class ChannelMessagePreviewHandler(RateLimitMixin, BaseHandler):
     def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
-        super.__init__(config, constant, telethon_bot, button_messages, frontend, repository)
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
         self.logger = logging.getLogger('not_so_anonymous')
 
-    async def handle(self, inline_senario, inline_button, data, db_connection: aiomysql.Connection):
+    async def handle(self, sender_status: UserStatus, inline_senario, inline_button, data, db_connection: aiomysql.Connection):
         self.logger.info(f'channel_message_preview handler!')
 
         channel_message = await self.repository.channel_message.get_channel_message(int(data), db_connection)
         user_status = await self.repository.user_status.get_user_status(channel_message.from_user, db_connection)
+        if sender_status.user_id != user_status.user_id:
+            return
+        
         input_sender = await self.telethon_bot.get_input_entity(int(user_status.user_tid))
         if inline_senario == 'w':
             if channel_message.verdict != 'w':
@@ -57,7 +61,7 @@ class ChannelMessagePreviewHandler(RateLimitMixin, BaseHandler):
                 return
             
             if inline_button == 'c':
-                await self.repository.channel_message.close_reply(channel_message.channel_message_id)
+                await self.repository.channel_message.close_reply(channel_message.channel_message_id, db_connection)
                 await self.frontend.edit_inline_message(input_sender, channel_message.message_tid, 'channel_message_preview', 'approved_closed', 
                                                         { 'user_status': user_status, 'message': channel_message.message },
                                                         {})

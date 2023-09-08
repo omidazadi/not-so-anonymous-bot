@@ -1,0 +1,8 @@
+{#
+    type: incoming_reply
+    senario: opened
+    kws: user_status, message
+#}
+[پیام دیگری] **{% if not user_status.is_veiled %}ناشناس{% else %}{{ user_status.veil }}{% endif %}**:
+
+{{ message }}

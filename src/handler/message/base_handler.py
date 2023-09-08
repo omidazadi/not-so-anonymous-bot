@@ -36,9 +36,19 @@ class BaseHandler(MemberCheckMixin):
             if channel_message == None or channel_message.verdict != 'a':
                 (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
                 await self.frontend.send_state_message(input_sender, 
-                                                        'common', 'not_found', {},
-                                                        return_button_state, return_button_kws)
-                user_status.state = user_status.state.split(',')[0]
+                                                       'common', 'not_found', {},
+                                                       return_button_state, return_button_kws)
+                user_status.state = user_status.extra.split(',')[0]
+                user_status.extra = None
+                await self.repository.user_status.set_user_status(user_status, db_connection)
+                return
+            
+            if channel_message.from_user == user_status.user_id:
+                (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                await self.frontend.send_state_message(input_sender, 
+                                                       'channel_reply', 'can_not_reply_to_yourself', {},
+                                                       return_button_state, return_button_kws)
+                user_status.state = user_status.extra.split(',')[0]
                 user_status.extra = None
                 await self.repository.user_status.set_user_status(user_status, db_connection)
                 return
@@ -48,7 +58,7 @@ class BaseHandler(MemberCheckMixin):
                 await self.frontend.send_state_message(input_sender, 
                                                         'channel_reply', 'reply_is_closed', {},
                                                         return_button_state, return_button_kws)
-                user_status.state = user_status.state.split(',')[0]
+                user_status.state = user_status.extra.split(',')[0]
                 user_status.extra = None
                 await self.repository.user_status.set_user_status(user_status, db_connection)
                 return
@@ -59,27 +69,27 @@ class BaseHandler(MemberCheckMixin):
                 await self.frontend.send_state_message(input_sender, 
                                                         'channel_reply', 'reply_limit_reached', { 'channel_reply_limit': self.constant.limit.channel_reply_limit },
                                                         return_button_state, return_button_kws)
-                user_status.state = user_status.state.split(',')[0]
+                user_status.state = user_status.extra.split(',')[0]
                 user_status.extra = None
                 await self.repository.user_status.set_user_status(user_status, db_connection)
                 return
-            else:
-                await self.frontend.send_state_message(input_sender, 
-                                                        'channel_reply', 'main', {},
-                                                        'channel_reply', { 'button_messages': self.button_messages })
-                await self.repository.user_status.set_user_status(user_status, db_connection)
+            
+            await self.frontend.send_state_message(input_sender, 
+                                                    'channel_reply', 'main', {},
+                                                    'channel_reply', { 'button_messages': self.button_messages })
+            await self.repository.user_status.set_user_status(user_status, db_connection)
         else:
             (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
             await self.frontend.send_state_message(input_sender, 
                                                     'common', 'must_be_a_member', { 'channel_id': self.config.channel.id },
                                                     return_button_state, return_button_kws)
-            user_status.state = user_status.state.split(',')[0]
+            user_status.state = user_status.extra.split(',')[0]
             user_status.extra = None
             await self.repository.user_status.set_user_status(user_status, db_connection)
             return
         
     async def get_return_state_for_reply(self, user_status: UserStatus, db_connection: aiomysql.Connection):
-        prev_state = user_status.state.split(',')[0]
+        prev_state = user_status.extra.split(',')[0]
         if prev_state == 'home':
             return ('home', 'main', { 'user_status': user_status, 'channel_id': self.config.channel.id })
         else:
@@ -87,7 +97,7 @@ class BaseHandler(MemberCheckMixin):
             return ('admin_home', 'main', { 'no_pending_messages': no_pending_messages })
 
     async def get_return_button_state_for_reply(self, user_status: UserStatus, db_connection: aiomysql.Connection):
-        prev_state = user_status.state.split(',')[0]
+        prev_state = user_status.extra.split(',')[0]
         if prev_state == 'home':
             return ('home', { 'button_messages': self.button_messages, 'user_status': user_status })
         else:
