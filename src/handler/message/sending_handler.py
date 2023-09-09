@@ -32,7 +32,7 @@ class SendingHandler(MessageAndMediaMixin, BaseHandler):
                                                    'sending', 'discard', {},
                                                    'home', { 'button_messages': self.button_messages, 'user_status': user_status })
         else:
-            (message, media) = await self.verify_message_and_media(event, user_status, db_connection)
+            (message, media) = await self.verify_message_and_media(event, 'home', user_status, db_connection)
             if message == None and media == None:
                 return
             

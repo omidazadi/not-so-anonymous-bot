@@ -38,7 +38,7 @@ class ChannelReplyHandler(MessageAndMediaMixin, BaseHandler):
                                                    'channel_reply', 'discard', {},
                                                    return_button_state, return_button_kws)
         else:
-            message, media = await self.verify_message_and_media(event, user_status, db_connection)
+            message, media = await self.verify_message_and_media(event, user_status.extra.split(',')[0], user_status, db_connection)
             if message == None and media == None:
                 return
             

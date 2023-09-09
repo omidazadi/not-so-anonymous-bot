@@ -34,7 +34,8 @@ class DatabaseManager:
 
     async def initialize(self):
         self.db_name = self.config.db
-        self.db_pool: aiomysql.Pool = await aiomysql.create_pool(host=self.config.host, port=self.config.port, user=self.config.user, password=self.config.password)
+        self.db_pool: aiomysql.Pool = await aiomysql.create_pool(host=self.config.host, port=self.config.port, user=self.config.user, 
+                                                                 password=self.config.password, maxsize=self.config.pool_size)
 
         db_connection: aiomysql.Connection = await self.open_anonymous_connection()
         await self.execute_initial_commands(db_connection)

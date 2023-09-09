@@ -12,9 +12,9 @@ config = Config()
 constant = Constant()
 
 if config.app.environment == 'developement':
-    logging.config.fileConfig(fname='src/logger.dev.conf', disable_existing_loggers=False)
+    logging.config.fileConfig(fname='config/logger.dev.conf', disable_existing_loggers=False)
 elif config.app.environment == 'production':
-    logging.config.fileConfig(fname='src/logger.prod.conf', disable_existing_loggers=False)
+    logging.config.fileConfig(fname='config/logger.prod.conf', disable_existing_loggers=False)
 else:
     raise ValueError('Invalid `APP_ENVIRONMENT` value.')
 

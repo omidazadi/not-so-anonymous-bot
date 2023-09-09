@@ -32,6 +32,12 @@ class HomeHandler(RateLimitMixin, BaseHandler):
             await self.frontend.send_state_message(input_sender, 
                                                    'home', 'talk_to_admin', { 'channel_admin': self.config.channel.admin },
                                                    'home', { 'button_messages': self.button_messages, 'user_status': user_status })
+        elif (event.message.message == self.button_messages['home']['put_on_veil'] and 
+              not user_status.is_veiled):
+            pass
+        elif (event.message.message == self.button_messages['home']['take_off_veil'] and 
+              user_status.is_veiled):
+            pass
         elif event.message.message == self.button_messages['home']['send_message']:
             sender_entity = await self.telethon_bot.get_entity(int(user_status.user_tid))
             if await self.is_member_of_channel(sender_entity):

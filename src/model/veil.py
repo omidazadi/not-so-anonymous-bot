@@ -1,6 +1,8 @@
 class Veil:
-    def __init__(self, name):
+    def __init__(self, name, category, gen_reservation_status):
         self.name = name
+        self.category = category
+        self.gen_reservation_status = gen_reservation_status
     
     @staticmethod
     def cook(db_result):

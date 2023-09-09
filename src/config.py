@@ -35,3 +35,4 @@ class Config:
             self.port: int = int(os.getenv('MYSQL_PORT'))
             self.user: str = os.getenv('MYSQL_USER')
             self.password: str = os.getenv('MYSQL_PASSWORD')
+            self.pool_size: int = int(os.getenv('MYSQL_POOL_SIZE'))

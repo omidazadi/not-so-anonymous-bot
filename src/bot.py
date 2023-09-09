@@ -1,9 +1,11 @@
 import asyncio
+import pickle
 import logging
 import json
 import aiomysql
 from telethon import TelegramClient, events
 from frontend import Frontend
+from veil_manager import VeilManager
 from repository.database_manager import DatabaseManager
 from repository.repository import Repository
 from handler.message.home_handler import HomeHandler
@@ -37,6 +39,11 @@ class Bot:
 
         self.frontend = Frontend(self.telethon_bot, self.config, self.constant)
         self.button_messages = json.load(open('ui/state_button.json', 'r', encoding='utf-8'))
+
+        db_connection = await self.database_manager.open_connection()
+        self.veil_manager = VeilManager(self.repository, self.config, self.constant)
+        await self.veil_manager.initialize(db_connection)
+        await self.database_manager.commit_connection(db_connection)
 
         self.home_handler = HomeHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
                                         self.repository)
