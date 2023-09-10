@@ -1,4 +1,5 @@
 import pickle
+from datetime import datetime
 
 class PeerMessage:
     def __init__(self, peer_message_id, channel_message_reply, peer_message_reply, 
@@ -13,7 +14,7 @@ class PeerMessage:
         self.message = message
         self.media = pickle.loads(media)
         self.message_status = message_status
-        self.sent_at = sent_at
+        self.sent_at = PeerMessage.convert_time(sent_at)
     
     @staticmethod
     def cook(db_result):
@@ -21,3 +22,13 @@ class PeerMessage:
         for row in db_result:
             result.append(PeerMessage(*row))
         return result
+    
+    @staticmethod
+    def convert_time(t):
+        if t == None:
+            return None
+        elif isinstance(t, datetime):
+            return t
+        elif type(t) == str:
+            return datetime.fromisoformat(t)
+        raise ValueError('Bad timestamp format.')

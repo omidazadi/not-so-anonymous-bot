@@ -15,7 +15,7 @@ class ChannelMessageRepository:
         sql_statement = """
             INSERT INTO channel_message (message_tid, from_user, message, media, can_reply, verdict, reviewed_by, sent_at, reviewed_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = ('?', from_user, message, media, True, 'w', None, now_date, datetime.fromtimestamp(0),)
+        values = ('?', from_user, message, media, True, 'w', None, now_date, datetime.fromisoformat('2000-01-01 00:00:00'),)
         await cursor.execute(sql_statement, values)
         channel_message_id = cursor.lastrowid
         await cursor.close()

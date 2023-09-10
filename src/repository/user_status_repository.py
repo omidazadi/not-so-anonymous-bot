@@ -51,7 +51,7 @@ class UserStatusRepository:
         sql_statement = """
             INSERT INTO user_status (user_tid, veil, is_veiled, state, extra, last_message_at) VALUES (%s, %s, %s, %s, %s, %s);
         """
-        values = (user_tid, None, False, 'home', None, datetime.fromtimestamp(0),)
+        values = (user_tid, None, False, 'home', None, datetime.fromisoformat('2000-01-01 00:00:00'),)
         await cursor.execute(sql_statement, values)
         await cursor.close()
 

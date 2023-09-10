@@ -1,3 +1,5 @@
+from datetime import datetime
+
 class UserStatus:
     def __init__(self, user_id, user_tid, gen_is_admin, veil, is_veiled, state, extra, last_message_at):
         self.user_id = user_id
@@ -7,7 +9,7 @@ class UserStatus:
         self.is_veiled = is_veiled
         self.state = state
         self.extra = extra
-        self.last_message_at = last_message_at
+        self.last_message_at = UserStatus.convert_time(last_message_at)
 
     @staticmethod
     def cook(db_result):
@@ -15,3 +17,13 @@ class UserStatus:
         for row in db_result:
             result.append(UserStatus(*row))
         return result
+    
+    @staticmethod
+    def convert_time(t):
+        if t == None:
+            return None
+        elif isinstance(t, datetime):
+            return t
+        elif type(t) == str:
+            return datetime.fromisoformat(t)
+        raise ValueError('Bad timestamp format.')
