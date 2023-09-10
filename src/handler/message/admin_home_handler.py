@@ -28,6 +28,10 @@ class AdminHomeHandler(PaginatedPendingListMixin, BaseHandler):
             await self.frontend.send_state_message(input_sender, 
                                                    'admin_home', 'main', { 'no_pending_messages': no_pending_messages },
                                                    'admin_home', { 'button_messages': self.button_messages })
+        elif (event.message.message == self.button_messages['admin_home']['veil_menu']):
+            await self.frontend.send_state_message(input_sender, 
+                                                   'common', 'coming_soon', {},
+                                                   'admin_home', { 'button_messages': self.button_messages })
         elif event.message.message == self.button_messages['admin_home']['hidden_omidi']:
             await self.frontend.send_state_message(input_sender, 
                                                    'admin_home', 'omidi', {},
