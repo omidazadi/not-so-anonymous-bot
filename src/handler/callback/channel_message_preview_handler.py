@@ -51,7 +51,7 @@ class ChannelMessagePreviewHandler(RateLimitMixin, BaseHandler):
                 if is_ok:
                     media = None
                     if channel_message.media != None:
-                        media = pickle.loads(self.constant.view.discard_media)
+                        media = pickle.loads(self.config.bot.discard_media)
                     await self.frontend.edit_inline_message(input_sender, channel_message.message_tid, 'channel_message_preview', 'discarded', 
                                                             {},
                                                             {},

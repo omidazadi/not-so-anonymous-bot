@@ -62,6 +62,19 @@ class PeerMessageRepository:
         if result == None:
             return None
         return PeerMessage(*result)
+    
+    async def is_already_replied(self, peer_message_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            SELECT COUNT(*) FROM peer_message WHERE peer_message_reply = %s AND (message_status = "z" OR message_status = "s");
+        """
+        values = (peer_message_id)
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchone()
+        await cursor.close()
+        return (False if result[0] == 0 else True)
 
     async def set_from_message_tid(self, peer_message_id, from_message_tid, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
@@ -90,7 +103,7 @@ class PeerMessageRepository:
         cursor: aiomysql.Cursor = await db_connection.cursor()
 
         sql_statement = """
-            SELECT COUNT(*) FROM peer_message WHERE channel_message_reply = %s AND from_user = %s;
+            SELECT COUNT(*) FROM peer_message WHERE channel_message_reply = %s AND from_user = %s AND (message_status = "z" OR message_status = "s");
         """
         values = (channel_message_id, user_id)
         await cursor.execute(sql_statement, values)

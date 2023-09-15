@@ -24,13 +24,29 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
                 return
             
             if inline_button == 's':
+                if peer_message.peer_message_reply != None:
+                    if await self.repository.peer_message.is_already_replied(peer_message.peer_message_reply, db_connection):
+                        await self.frontend.send_inline_message(input_sender, 'already_replied', 'notification', 
+                                                                {},
+                                                                {},
+                                                                reply_to=peer_message.from_message_tid)
+                        return
+                if peer_message.channel_message_reply != None:
+                    no_replies = await self.repository.peer_message.get_no_replies(peer_message.channel_message_reply, user_status.user_id, db_connection)
+                    if no_replies >= self.constant.limit.channel_reply_limit:
+                        await self.frontend.send_inline_message(input_sender, 'channel_reply_limit_reached', 'notification', 
+                                                                { 'channel_reply_limit': self.constant.limit.channel_reply_limit },
+                                                                {},
+                                                                reply_to=peer_message.from_message_tid)
+                        return
+                
                 (reciever_status, message_tid) = await self.get_reciever(peer_message, db_connection)
                 input_reciever = await self.telethon_bot.get_input_entity(int(reciever_status.user_tid))
                 media = None
                 if peer_message.media != None:
-                    media = pickle.loads(self.constant.view.new_reply_media)
+                    media = pickle.loads(self.config.bot.new_reply_media)
                 to_message_tid_int = await self.frontend.send_inline_message(input_reciever, 'incoming_reply', 'sealed', 
-                                                                             { 'user_status': user_status, 'message': peer_message.message },
+                                                                             {},
                                                                              { 'peer_message_id': peer_message.peer_message_id },
                                                                              reply_to=message_tid, media=media)
                 
@@ -45,8 +61,8 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
                     if is_ok:
                         if peer_message.peer_message_reply != None:
                             replied_to_peer_message = await self.repository.peer_message.get_peer_message(peer_message.peer_message_reply, db_connection)
-                            await self.frontend.edit_inline_message(input_reciever, replied_to_peer_message.to_message_tid, 'incoming_reply', 'answered', 
-                                                                    { 'user_status': user_status, 'message': peer_message.message },
+                            await self.frontend.edit_inline_message(input_sender, replied_to_peer_message.to_message_tid, 'incoming_reply', 'answered', 
+                                                                    { 'user_status': reciever_status, 'message': replied_to_peer_message.message },
                                                                     {})
                         await self.repository.peer_message.set_to_message_tid(peer_message.peer_message_id, str(to_message_tid_int), db_connection)
                         await self.frontend.edit_inline_message(input_sender, peer_message.from_message_tid, 'outgoing_reply', 'sent_not_seen', 
@@ -57,7 +73,7 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
                 if is_ok:
                     media = None
                     if peer_message.media != None:
-                        media = pickle.loads(self.constant.view.discard_media)
+                        media = pickle.loads(self.config.bot.discard_media)
                     await self.frontend.edit_inline_message(input_sender, peer_message.from_message_tid, 'outgoing_reply', 'discarded', 
                                                             {},
                                                             {},
