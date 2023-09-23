@@ -13,10 +13,10 @@ class PeerMessageRepository:
 
         now_date = datetime.utcnow()
         sql_statement = """
-            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, message_status, sent_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, message_status, sent_at, is_reported, is_report_reviewed)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = (channel_message_reply, None, '?', '?', user_id, message, media, 'w', now_date)
+        values = (channel_message_reply, None, '?', '?', user_id, message, media, 'w', now_date, False, False)
         await cursor.execute(sql_statement, values)
         peer_message_id = cursor.lastrowid
         await cursor.close()
@@ -28,10 +28,10 @@ class PeerMessageRepository:
 
         now_date = datetime.utcnow()
         sql_statement = """
-            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, message_status, sent_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, message_status, sent_at, is_reported, is_report_reviewed)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = (None, peer_message_reply, '?', '?', user_id, message, media, 'w', now_date)
+        values = (None, peer_message_reply, '?', '?', user_id, message, media, 'w', now_date, False, False)
         await cursor.execute(sql_statement, values)
         peer_message_id = cursor.lastrowid
         await cursor.close()
@@ -152,3 +152,84 @@ class PeerMessageRepository:
         is_ok = (True if cursor.rowcount > 0 else False)
         await cursor.close()
         return is_ok
+    
+    async def report_reply(self, peer_message_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            UPDATE peer_message SET is_reported = TRUE WHERE is_reported = FALSE AND peer_message_id = %s;
+        """
+        values = (peer_message_id,)
+        await cursor.execute(sql_statement, values)
+
+        is_ok = (True if cursor.rowcount > 0 else False)
+        await cursor.close()
+        return is_ok
+    
+    async def get_a_report(self, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            SELECT * FROM peer_message WHERE is_reported = TRUE AND is_report_reviewed = FALSE;
+        """
+        values = ()
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchone()
+        await cursor.close()
+        if result == None:
+            return None
+        return PeerMessage(*result)
+    
+    async def get_no_reports(self, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            SELECT COUNT(*) FROM peer_message WHERE is_reported = TRUE AND is_report_reviewed = FALSE;
+        """
+        values = ()
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchone()
+        await cursor.close()
+        return result[0]
+    
+    async def review_report(self, peer_message_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            UPDATE peer_message SET is_report_reviewed = TRUE WHERE is_report_reviewed = FALSE AND peer_message_id = %s;
+        """
+        values = (peer_message_id,)
+        await cursor.execute(sql_statement, values)
+
+        is_ok = (True if cursor.rowcount > 0 else False)
+        await cursor.close()
+        return is_ok
+    
+    async def get_tail_replies(self, sender_user_id, reciever_user_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            (
+                SELECT pm1.* FROM peer_message pm1 INNER JOIN peer_message pm2 on pm1.peer_message_reply = pm2.peer_message_id
+                WHERE pm1.message_status = "s" AND pm1.from_user = %s AND pm2.from_user = %s AND NOT EXISTS (
+                    SELECT 1 FROM peer_message pm3 WHERE pm3.peer_message_reply = pm1.peer_message_id 
+                )
+            )
+            UNION
+            (
+                SELECT pm1.* FROM peer_message pm1 INNER JOIN channel_message pm2 on pm1.channel_message_reply = pm2.channel_message_id
+                WHERE pm1.message_status = "s" AND pm1.from_user = %s AND pm2.from_user = %s AND NOT EXISTS (
+                    SELECT 1 FROM peer_message pm3 WHERE pm3.peer_message_reply = pm1.peer_message_id 
+                )
+            )
+        """
+        values = (sender_user_id, reciever_user_id, sender_user_id, reciever_user_id,)
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchall()
+        await cursor.close()
+        return PeerMessage.cook(result)

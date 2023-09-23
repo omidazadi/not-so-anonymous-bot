@@ -1,7 +1,8 @@
 from datetime import datetime
 
 class UserStatus:
-    def __init__(self, user_id, user_tid, gen_is_admin, veil, is_veiled, state, extra, last_message_at):
+    def __init__(self, user_id, user_tid, gen_is_admin, veil, is_veiled, state, extra, last_message_at,
+                 is_banned):
         self.user_id = user_id
         self.user_tid = user_tid
         self.gen_is_admin = gen_is_admin
@@ -10,6 +11,7 @@ class UserStatus:
         self.state = state
         self.extra = extra
         self.last_message_at = UserStatus.convert_time(last_message_at)
+        self.is_banned = is_banned
 
     @staticmethod
     def cook(db_result):

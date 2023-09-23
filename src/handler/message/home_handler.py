@@ -28,6 +28,13 @@ class HomeHandler(RateLimitMixin, BaseHandler):
             await self.frontend.send_state_message(input_sender, 
                                                    'admin_auth', 'main', {},
                                                    'admin_auth', { 'button_messages': self.button_messages })
+        elif event.message.message == self.button_messages['home']['unblock_all']:
+            no_blocked_users = await self.repository.block.get_no_blocked_users(user_status.user_id, db_connection)
+            user_status.state = 'unblock_all'
+            await self.repository.user_status.set_user_status(user_status, db_connection)
+            await self.frontend.send_state_message(input_sender, 
+                                                   'unblock_all', 'main', { 'no_blocked_users': no_blocked_users },
+                                                   'unblock_all', { 'button_messages': self.button_messages })
         elif event.message.message == self.button_messages['home']['talk_to_admin']:
             await self.frontend.send_state_message(input_sender, 
                                                    'home', 'talk_to_admin', { 'channel_admin': self.config.channel.admin },
@@ -43,8 +50,7 @@ class HomeHandler(RateLimitMixin, BaseHandler):
                                                    'common', 'coming_soon', {},
                                                    'home', { 'button_messages': self.button_messages, 'user_status': user_status })
         elif event.message.message == self.button_messages['home']['send_message']:
-            sender_entity = await self.telethon_bot.get_entity(int(user_status.user_tid))
-            if await self.is_member_of_channel(sender_entity):
+            if await self.is_member_of_channel(user_status.user_tid):
                 if not await self.is_rate_limited(user_status):
                     user_status.state = 'sending'
                     await self.repository.user_status.set_user_status(user_status, db_connection)

@@ -18,30 +18,59 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
         if sender_status.user_id != user_status.user_id:
             return
         
+        if not await self.is_member_of_channel(user_status.user_tid):
+            await self.frontend.send_inline_message(input_sender, 'notification', 'must_be_a_member', 
+                                                    { 'channel_id': self.config.channel.id },
+                                                    {},
+                                                    reply_to=peer_message.from_message_tid)
+            return
+        
+        (reciever_status, message_tid) = await self.get_reciever(peer_message, db_connection)
+        input_reciever = await self.telethon_bot.get_input_entity(int(reciever_status.user_tid))
         input_sender = await self.telethon_bot.get_input_entity(int(user_status.user_tid))
         if inline_senario == 'w':
             if peer_message.message_status != 'w':
                 return
             
             if inline_button == 's':
+                if await self.repository.block.is_blocked_by(reciever_status.user_id, user_status.user_id, db_connection):
+                    await self.frontend.send_inline_message(input_sender, 'notification', 'you_are_blocked', 
+                                                            {},
+                                                            {},
+                                                            reply_to=peer_message.from_message_tid)
+                    return
+                    
+                if await self.repository.block.is_blocked_by(user_status.user_id, reciever_status.user_id, db_connection):
+                    await self.frontend.send_inline_message(input_sender, 'notification', 'he_is_blocked', 
+                                                            {},
+                                                            {},
+                                                            reply_to=peer_message.from_message_tid)
+                    return
+                
                 if peer_message.peer_message_reply != None:
                     if await self.repository.peer_message.is_already_replied(peer_message.peer_message_reply, db_connection):
-                        await self.frontend.send_inline_message(input_sender, 'already_replied', 'notification', 
+                        await self.frontend.send_inline_message(input_sender, 'notification', 'already_replied', 
                                                                 {},
                                                                 {},
                                                                 reply_to=peer_message.from_message_tid)
                         return
                 if peer_message.channel_message_reply != None:
-                    no_replies = await self.repository.peer_message.get_no_replies(peer_message.channel_message_reply, user_status.user_id, db_connection)
+                    channel_message = await self.repository.channel_message.get_channel_message(peer_message.channel_message_reply, db_connection)
+                    if not channel_message.can_reply:
+                        await self.frontend.send_inline_message(input_sender, 'notification', 'reply_is_closed', 
+                                                                {},
+                                                                {},
+                                                                reply_to=peer_message.from_message_tid)
+                        return
+
+                    no_replies = await self.repository.peer_message.get_no_replies(channel_message.channel_message_id, user_status.user_id, db_connection)
                     if no_replies >= self.constant.limit.channel_reply_limit:
-                        await self.frontend.send_inline_message(input_sender, 'channel_reply_limit_reached', 'notification', 
+                        await self.frontend.send_inline_message(input_sender, 'notification', 'channel_reply_limit_reached', 
                                                                 { 'channel_reply_limit': self.constant.limit.channel_reply_limit },
                                                                 {},
                                                                 reply_to=peer_message.from_message_tid)
                         return
                 
-                (reciever_status, message_tid) = await self.get_reciever(peer_message, db_connection)
-                input_reciever = await self.telethon_bot.get_input_entity(int(reciever_status.user_tid))
                 media = None
                 if peer_message.media != None:
                     media = pickle.loads(self.config.bot.new_reply_media)
@@ -51,7 +80,7 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
                                                                              reply_to=message_tid, media=media)
                 
                 if to_message_tid_int == None:
-                    await self.frontend.send_inline_message(input_sender, 'i_am_blocked', 'notification', 
+                    await self.frontend.send_inline_message(input_sender, 'notification', 'i_am_blocked', 
                                                             {},
                                                             {},
                                                             reply_to=peer_message.from_message_tid)

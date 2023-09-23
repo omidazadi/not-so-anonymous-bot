@@ -3,8 +3,9 @@ import aiomysql
 from model.user_status import UserStatus
 from mixin.paginated_pending_list_mixin import PaginatedPendingListMixin
 from handler.message.base_handler import BaseHandler
+from mixin.reciever_mixin import RecieverMixin
 
-class AdminHomeHandler(PaginatedPendingListMixin, BaseHandler):
+class AdminHomeHandler(PaginatedPendingListMixin, RecieverMixin, BaseHandler):
     def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
         super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
         self.logger = logging.getLogger('not_so_anonymous')
@@ -18,20 +19,41 @@ class AdminHomeHandler(PaginatedPendingListMixin, BaseHandler):
             data = self.parse_hidden_start(event.message.message)
             if data == None:
                 no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
+                no_reports = await self.repository.peer_message.get_no_reports(db_connection)
                 await self.frontend.send_state_message(input_sender, 
-                                                       'admin_home', 'main', { 'no_pending_messages': no_pending_messages },
+                                                       'admin_home', 'main', { 'no_pending_messages': no_pending_messages, 'no_reports': no_reports },
                                                        'admin_home', { 'button_messages': self.button_messages })
             else:
                 await self.goto_channel_reply_state(input_sender, 'admin_home', data, user_status, db_connection)
         elif event.message.message == self.button_messages['admin_home']['refresh']:
             no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
+            no_reports = await self.repository.peer_message.get_no_reports(db_connection)
             await self.frontend.send_state_message(input_sender, 
-                                                   'admin_home', 'main', { 'no_pending_messages': no_pending_messages },
+                                                   'admin_home', 'main', { 'no_pending_messages': no_pending_messages, 'no_reports': no_reports },
                                                    'admin_home', { 'button_messages': self.button_messages })
         elif (event.message.message == self.button_messages['admin_home']['veil_menu']):
             await self.frontend.send_state_message(input_sender, 
                                                    'common', 'coming_soon', {},
                                                    'admin_home', { 'button_messages': self.button_messages })
+        elif (event.message.message == self.button_messages['admin_home']['ban_menu']):
+            user_status.state = 'ban_menu'
+            await self.repository.user_status.set_user_status(user_status, db_connection)
+            await self.frontend.send_state_message(input_sender, 
+                                                   'ban_menu', 'main', {},
+                                                   'ban_menu', { 'button_messages': self.button_messages })
+        elif (event.message.message == self.button_messages['admin_home']['show_report']):
+            peer_message = await self.repository.peer_message.get_a_report(db_connection)
+            if peer_message == None:
+                await self.frontend.send_state_message(input_sender, 
+                                                       'admin_home', 'no_report', {},
+                                                       'admin_home', { 'button_messages': self.button_messages })
+            else:
+                (reciever_status, message_tid) = await self.get_reciever(peer_message, db_connection)
+                await self.frontend.send_state_message(input_sender, 
+                                                       'admin_home', 'show_report', { 'reporter': reciever_status.user_id, 'reportee': peer_message.from_user, 'message': peer_message.message},
+                                                       'admin_home', { 'button_messages': self.button_messages },
+                                                       media=peer_message.media)
+                await self.repository.peer_message.review_report(peer_message.peer_message_id, db_connection)
         elif event.message.message == self.button_messages['admin_home']['hidden_omidi']:
             await self.frontend.send_state_message(input_sender, 
                                                    'admin_home', 'omidi', {},

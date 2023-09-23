@@ -4,7 +4,7 @@ from datetime import datetime
 class PeerMessage:
     def __init__(self, peer_message_id, channel_message_reply, peer_message_reply, 
                  from_message_tid, to_message_tid, from_user, message, media,
-                 message_status, sent_at):
+                 message_status, sent_at, is_reported, is_report_reviewed):
         self.peer_message_id = peer_message_id
         self.channel_message_reply = channel_message_reply
         self.peer_message_reply = peer_message_reply
@@ -15,6 +15,8 @@ class PeerMessage:
         self.media = pickle.loads(media)
         self.message_status = message_status
         self.sent_at = PeerMessage.convert_time(sent_at)
+        self.is_reported = is_reported
+        self.is_report_reviewed = is_report_reviewed
     
     @staticmethod
     def cook(db_result):

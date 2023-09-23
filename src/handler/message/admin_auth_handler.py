@@ -35,13 +35,14 @@ class AdminAuthHandler(BaseHandler):
                 admin = await self.repository.admin.get_admin(user_status.user_tid, db_connection)
                 if bcrypt.checkpw(bytes(event.message.message, 'utf-8'), bytes(admin.password_hash, encoding='utf-8')):
                     no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
+                    no_reports = await self.repository.peer_message.get_no_reports(db_connection)
                     user_status.state = 'admin_home'
                     await self.repository.user_status.set_user_status(user_status, db_connection)
                     await self.frontend.send_state_message(input_sender, 
                                                            'admin_auth', 'correct', {},
                                                            None, None)
                     await self.frontend.send_state_message(input_sender, 
-                                                           'admin_home', 'main', { 'no_pending_messages': no_pending_messages },
+                                                           'admin_home', 'main', { 'no_pending_messages': no_pending_messages, 'no_reports': no_reports },
                                                            'admin_home', { 'button_messages': self.button_messages })
                 else:
                     user_status.state = 'home'

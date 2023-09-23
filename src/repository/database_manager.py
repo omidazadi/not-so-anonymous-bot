@@ -54,12 +54,17 @@ class DatabaseManager:
     async def execute_migration_commands(self, db_connection: aiomysql.Connection):
         version, migration_number = await self.get_meta_data('version', db_connection), '0000'
         while os.path.exists(f'src/sql/migration/migration_{migration_number}.sql'):
+            migration_version = (await self.get_meta_data(f'migration_{migration_number}', db_connection)).meta_value
+            if version.meta_value >= migration_version:
+                migration_number = DatabaseManager.next_migration_number(migration_number)
+                continue
+
             cursor: aiomysql.Cursor = await db_connection.cursor()
             migration_commands = open(f'src/sql/migration/migration_{migration_number}.sql', 'r').read()
             await cursor.execute(migration_commands)
             await cursor.close()
 
-            version.meta_value = (await self.get_meta_data(f'migration_{migration_number}', db_connection)).meta_value
+            version.meta_value = migration_version
             migration_number = DatabaseManager.next_migration_number(migration_number)
         
         return version

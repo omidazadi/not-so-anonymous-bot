@@ -9,8 +9,8 @@
 صفحه‌ی {{ current_page }} از {{ total_page }}:
 
 {% for message in messages %}
-پیام شماره‌ی {{ message.channel_message_id }} [مدیا **{% if message.media != None %}دارد{% else %}ندارد{% endif %}**]:
-
+[پیام شماره‌ی {{ message.channel_message_id }}, مدیا {% if message.media != None %}دارد{% else %}ندارد{% endif %}]
+کاربر {{ message.from_user }}:
 {% if message.message | length > preview_length %}
 __{{ message.message[0:preview_length] }}...__
 {% else %}

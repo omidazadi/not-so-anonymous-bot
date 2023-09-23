@@ -29,8 +29,7 @@ class BaseHandler(MemberCheckMixin):
         user_status.state = 'channel_reply'
         user_status.extra = f'{prev_state},{channel_message_id_str}'
 
-        sender_entity = await self.telethon_bot.get_entity(int(user_status.user_tid))
-        if await self.is_member_of_channel(sender_entity):
+        if await self.is_member_of_channel(user_status.user_tid):
             channel_message = (await self.repository.channel_message.get_channel_message(int(channel_message_id_str), db_connection)
                                if channel_message_id_str.isnumeric() else None)
             if channel_message == None or channel_message.verdict != 'a':
@@ -47,6 +46,26 @@ class BaseHandler(MemberCheckMixin):
                 (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
                 await self.frontend.send_state_message(input_sender, 
                                                        'channel_reply', 'can_not_reply_to_yourself', {},
+                                                       return_button_state, return_button_kws)
+                user_status.state = user_status.extra.split(',')[0]
+                user_status.extra = None
+                await self.repository.user_status.set_user_status(user_status, db_connection)
+                return
+            
+            if await self.repository.block.is_blocked_by(channel_message.from_user, user_status.user_id, db_connection):
+                (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                await self.frontend.send_state_message(input_sender, 
+                                                       'common', 'you_are_blocked', {},
+                                                       return_button_state, return_button_kws)
+                user_status.state = user_status.extra.split(',')[0]
+                user_status.extra = None
+                await self.repository.user_status.set_user_status(user_status, db_connection)
+                return
+            
+            if await self.repository.block.is_blocked_by(user_status.user_id, channel_message.from_user, db_connection):
+                (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                await self.frontend.send_state_message(input_sender, 
+                                                       'common', 'he_is_blocked', {},
                                                        return_button_state, return_button_kws)
                 user_status.state = user_status.extra.split(',')[0]
                 user_status.extra = None
@@ -94,7 +113,8 @@ class BaseHandler(MemberCheckMixin):
             return ('home', 'main', { 'user_status': user_status, 'channel_id': self.config.channel.id })
         else:
             no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
-            return ('admin_home', 'main', { 'no_pending_messages': no_pending_messages })
+            no_reports = await self.repository.peer_message.get_no_reports(db_connection)
+            return ('admin_home', 'main', { 'no_pending_messages': no_pending_messages, 'no_reports': no_reports })
 
     async def get_return_button_state_for_reply(self, user_status: UserStatus, db_connection: aiomysql.Connection):
         prev_state = user_status.extra.split(',')[0]

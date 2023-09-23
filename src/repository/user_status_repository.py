@@ -49,9 +49,9 @@ class UserStatusRepository:
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
         sql_statement = """
-            INSERT INTO user_status (user_tid, veil, is_veiled, state, extra, last_message_at) VALUES (%s, %s, %s, %s, %s, %s);
+            INSERT INTO user_status (user_tid, veil, is_veiled, state, extra, last_message_at, is_banned) VALUES (%s, %s, %s, %s, %s, %s, %s);
         """
-        values = (user_tid, None, False, 'home', None, datetime.fromisoformat('2000-01-01 00:00:00'),)
+        values = (user_tid, None, False, 'home', None, datetime.fromisoformat('2000-01-01 00:00:00'), False)
         await cursor.execute(sql_statement, values)
         await cursor.close()
 
@@ -60,6 +60,42 @@ class UserStatusRepository:
         cursor: aiomysql.Cursor = await db_connection.cursor()
         sql_statement = """
             SELECT * FROM user_status WHERE gen_is_admin = TRUE;
+        """
+        values = ()
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchall()
+        await cursor.close()
+        return UserStatus.cook(result)
+    
+    async def ban_user(self, user_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+        sql_statement = """
+            UPDATE user_status SET is_banned = TRUE WHERE is_banned = FALSE AND user_id = %s;
+        """
+        values = (user_id,)
+        await cursor.execute(sql_statement, values)
+        is_ok = (True if cursor.rowcount > 0 else False)
+        await cursor.close()
+        return is_ok
+    
+    async def unban_user(self, user_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+        sql_statement = """
+            UPDATE user_status SET is_banned = FALSE WHERE is_banned = TRUE AND user_id = %s;
+        """
+        values = (user_id,)
+        await cursor.execute(sql_statement, values)
+        is_ok = (True if cursor.rowcount > 0 else False)
+        await cursor.close()
+        return is_ok
+    
+    async def get_all_banned_users(self, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+        sql_statement = """
+            SELECT * FROM user_status WHERE is_banned = TRUE;
         """
         values = ()
         await cursor.execute(sql_statement, values)
