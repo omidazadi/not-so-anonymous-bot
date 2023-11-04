@@ -16,6 +16,8 @@ class ParticipantManager:
         self.participants = set()
         async for user in self.telethon_bot.iter_participants(self.config.channel.id):
             self.participants.add(user.id)
+            print(user.id)
+        print(f'size: {len(self.participants)}')
     
     def add_participant(self, user_tid):
         self.participants.add(user_tid)
