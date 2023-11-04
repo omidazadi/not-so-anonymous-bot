@@ -1,6 +1,13 @@
 {#
     type: channel_message_preview
     senario: approved_closed
-    kws: 
+    kws: channel_message_id
 #}
-[]
+[
+    [
+        {
+            "text": "پاسخ‌های این پیام را باز کن 👐",
+            "data": "cmp,c,o,{{ channel_message_id }}"
+        }
+    ]
+]

@@ -2,7 +2,8 @@ import logging
 import json
 from jinja2 import Environment, FileSystemLoader
 from telethon import TelegramClient, utils
-from telethon.tl.functions.messages import SendMediaRequest, SendMessageRequest, EditMessageRequest
+from telethon.tl.functions.messages import SendMediaRequest, SendMessageRequest, EditMessageRequest, \
+    DeleteMessagesRequest
 from telethon.tl.types import KeyboardButton, KeyboardButtonCallback, KeyboardButtonRow, \
     KeyboardButtonUrl, ReplyKeyboardMarkup, ReplyInlineMarkup, InputReplyToMessage, \
     UpdateShortSentMessage, Updates, UpdateMessageID
@@ -126,6 +127,12 @@ class Frontend():
 
         await self.telethon_bot(EditMessageRequest(peer=user, id=int(message_tid), message=message_text, entities=message_entities, reply_markup=buttons,
                                                    media=media))
+        
+    @IgnoreRPCErrors
+    async def delete_inline_message(self, message_tid):
+        self.logger.info('Frontend delete_inline_message!')
+
+        await self.telethon_bot(DeleteMessagesRequest(id=[int(message_tid)], revoke=True))
         
     @staticmethod
     def extract_message_tid_from_updates(updates):

@@ -5,8 +5,8 @@ from model.user_status import UserStatus
 from handler.message.base_handler import BaseHandler
 
 class AdminAuthHandler(BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):
@@ -18,6 +18,7 @@ class AdminAuthHandler(BaseHandler):
             data = self.parse_hidden_start(event.message.message)
             if data == None:
                 user_status.state = 'home'
+                user_status.extra = None
                 await self.repository.user_status.set_user_status(user_status, db_connection)
                 await self.frontend.send_state_message(input_sender, 
                                                        'home', 'main', { 'user_status': user_status, 'channel_id': self.config.channel.id },

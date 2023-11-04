@@ -5,8 +5,8 @@ from mixin.paginated_pending_list_mixin import PaginatedPendingListMixin
 from handler.message.base_handler import BaseHandler
 
 class PendingListHandler(PaginatedPendingListMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):

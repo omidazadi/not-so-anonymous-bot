@@ -7,15 +7,15 @@ class ChannelMessageRepository:
     def __init__(self):
         self.logger = logging.getLogger('not_so_anonymous')
 
-    async def create_channel_message(self, from_user, message, media, db_connection: aiomysql.Connection):
+    async def create_channel_message(self, from_user, from_user_veil, message, media, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
 
         now_date = datetime.utcnow()
         sql_statement = """
-            INSERT INTO channel_message (message_tid, from_user, message, media, can_reply, verdict, reviewed_by, sent_at, reviewed_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO channel_message (message_tid, from_user, from_user_veil, message, media, can_reply, verdict, reviewed_by, sent_at, reviewed_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = ('?', from_user, message, media, True, 'w', None, now_date, datetime.fromisoformat('2000-01-01 00:00:00'),)
+        values = ('?', from_user, from_user_veil, message, media, True, 'w', None, now_date, datetime.fromisoformat('2000-01-01 00:00:00'),)
         await cursor.execute(sql_statement, values)
         channel_message_id = cursor.lastrowid
         await cursor.close()
@@ -137,3 +137,27 @@ class ChannelMessageRepository:
         values = (channel_message_id,)
         await cursor.execute(sql_statement, values)
         await cursor.close()
+
+    async def open_reply(self, channel_message_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            UPDATE channel_message SET can_reply = TRUE WHERE channel_message_id = %s;
+        """
+        values = (channel_message_id,)
+        await cursor.execute(sql_statement, values)
+        await cursor.close()
+
+    async def get_no_user_channel_messages(self, user_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            SELECT COUNT(*) FROM channel_message WHERE from_user = %s;
+        """
+        values = (user_id)
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchone()
+        await cursor.close()
+        return result[0]

@@ -6,8 +6,8 @@ from handler.message.base_handler import BaseHandler
 from mixin.reciever_mixin import RecieverMixin
 
 class AdminHomeHandler(PaginatedPendingListMixin, RecieverMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):
@@ -31,17 +31,19 @@ class AdminHomeHandler(PaginatedPendingListMixin, RecieverMixin, BaseHandler):
             await self.frontend.send_state_message(input_sender, 
                                                    'admin_home', 'main', { 'no_pending_messages': no_pending_messages, 'no_reports': no_reports },
                                                    'admin_home', { 'button_messages': self.button_messages })
-        elif (event.message.message == self.button_messages['admin_home']['veil_menu']):
+        elif event.message.message == self.button_messages['admin_home']['veil_menu']:
+            user_status.state = 'veil_menu'
+            await self.repository.user_status.set_user_status(user_status, db_connection)
             await self.frontend.send_state_message(input_sender, 
-                                                   'common', 'coming_soon', {},
-                                                   'admin_home', { 'button_messages': self.button_messages })
-        elif (event.message.message == self.button_messages['admin_home']['ban_menu']):
+                                                   'veil_menu', 'main', {},
+                                                   'veil_menu', { 'button_messages': self.button_messages })
+        elif event.message.message == self.button_messages['admin_home']['ban_menu']:
             user_status.state = 'ban_menu'
             await self.repository.user_status.set_user_status(user_status, db_connection)
             await self.frontend.send_state_message(input_sender, 
                                                    'ban_menu', 'main', {},
                                                    'ban_menu', { 'button_messages': self.button_messages })
-        elif (event.message.message == self.button_messages['admin_home']['show_report']):
+        elif event.message.message == self.button_messages['admin_home']['show_report']:
             peer_message = await self.repository.peer_message.get_a_report(db_connection)
             if peer_message == None:
                 await self.frontend.send_state_message(input_sender, 
@@ -53,7 +55,13 @@ class AdminHomeHandler(PaginatedPendingListMixin, RecieverMixin, BaseHandler):
                                                        'admin_home', 'show_report', { 'reporter': reciever_status.user_id, 'reportee': peer_message.from_user, 'message': peer_message.message},
                                                        'admin_home', { 'button_messages': self.button_messages },
                                                        media=peer_message.media)
-                await self.repository.peer_message.review_report(peer_message.peer_message_id, db_connection)
+                await self.repository.peer_message.review_report(peer_message.peer_message_id, db_connection) 
+        elif event.message.message == self.button_messages['admin_home']['direct_admin']:
+            user_status.state = 'direct_admin_id_phase'
+            await self.repository.user_status.set_user_status(user_status, db_connection)
+            await self.frontend.send_state_message(input_sender, 
+                                                   'direct_admin_id_phase', 'main', {},
+                                                   'direct_admin_id_phase', { 'button_messages': self.button_messages })
         elif event.message.message == self.button_messages['admin_home']['hidden_omidi']:
             await self.frontend.send_state_message(input_sender, 
                                                    'admin_home', 'omidi', {},

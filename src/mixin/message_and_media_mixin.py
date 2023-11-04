@@ -9,7 +9,6 @@ class MessageAndMediaMixin:
             if hasattr(event.message.media, 'photo'):
                 media = event.message.media.photo
             elif (hasattr(event.message.media, 'document') and 
-                  not self.is_voice(event.message.media) and
                   not self.is_sticker(event.message.media)):
                 media = event.message.media.document
             else:

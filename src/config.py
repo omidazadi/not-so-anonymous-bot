@@ -21,8 +21,6 @@ class Config:
     class Bot:
         def __init__(self):
             self.id: str = os.getenv('BOT_ID')
-            self.discard_media: bytes = bytes.fromhex(os.getenv('BOT_DISCARD_MEDIA'))
-            self.new_reply_media: bytes = bytes.fromhex(os.getenv('BOT_NEW_REPLY_MEDIA'))
 
     class Telegram:
         def __init__(self):

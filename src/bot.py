@@ -1,5 +1,4 @@
 import asyncio
-import pickle
 import logging
 import json
 import aiomysql
@@ -18,9 +17,16 @@ from handler.message.message_review_handler import MessageReviewHandler
 from handler.message.ban_menu_handler import BanMenuHandler
 from handler.message.channel_reply_handler import ChannelReplyHandler
 from handler.message.peer_reply_handler import PeerReplyHandler
+from handler.message.direct_admin_id_phase_handler import DirectAdminIdPhaseHandler
+from handler.message.direct_admin_message_phase_handler import DirectAdminMessagePhaseHandler
+from handler.message.veil_menu_handler import VeilMenuHandler
+from handler.message.my_veils_handler import MyVeilsHandler
+from handler.message.redeem_ticket_handler import RedeemTicketHandler
 from handler.callback.channel_message_preview_handler import ChannelMessagePreviewHandler
 from handler.callback.outgoing_reply_handler import OutgoingReplyHandler
 from handler.callback.incoming_reply_handler import IncomingReplyHandler
+from handler.callback.notification_handler import NotificationHandler
+from participant_manager import ParticipantManager
 from config import Config
 from constant import Constant
 
@@ -41,6 +47,8 @@ class Bot:
 
         self.frontend = Frontend(self.telethon_bot, self.config, self.constant)
         self.button_messages = json.load(open('ui/state_button.json', 'r', encoding='utf-8'))
+        self.participant_manager = ParticipantManager(self.telethon_bot, self.config, self.constant)
+        await self.participant_manager.initialize()
 
         db_connection = await self.database_manager.open_connection()
         self.veil_manager = VeilManager(self.repository, self.config, self.constant)
@@ -48,35 +56,56 @@ class Bot:
         await self.database_manager.commit_connection(db_connection)
 
         self.home_handler = HomeHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                        self.repository)
+                                        self.repository, self.participant_manager, self.veil_manager)
         self.sending_handler = SendingHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                              self.repository)
+                                              self.repository, self.participant_manager, self.veil_manager)
         self.unblock_all_handler = UnblockAllHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                     self.repository)
+                                                     self.repository, self.participant_manager, self.veil_manager)
         self.admin_auth_handler = AdminAuthHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                   self.repository)
+                                                   self.repository, self.participant_manager, self.veil_manager)
         self.admin_home_handler = AdminHomeHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                   self.repository)
+                                                   self.repository, self.participant_manager, self.veil_manager)
         self.pending_list_handler = PendingListHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                       self.repository)
+                                                       self.repository, self.participant_manager, self.veil_manager)
         self.message_review_handler = MessageReviewHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                           self.repository)
+                                                           self.repository, self.participant_manager, self.veil_manager)
         self.channel_reply_handler = ChannelReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                         self.repository)
+                                                         self.repository, self.participant_manager, self.veil_manager)
         self.peer_reply_handler = PeerReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                   self.repository)
+                                                   self.repository, self.participant_manager, self.veil_manager)
+        self.direct_admin_id_phase_handler = DirectAdminIdPhaseHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                                       self.repository, self.participant_manager, self.veil_manager)
+        self.direct_admin_message_phase = DirectAdminMessagePhaseHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                                         self.repository, self.participant_manager, self.veil_manager)
+        self.veil_menu = VeilMenuHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                         self.repository, self.participant_manager, self.veil_manager)
+        self.my_veils = MyVeilsHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                       self.repository, self.participant_manager, self.veil_manager)
+        self.redeem_ticket = RedeemTicketHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                 self.repository, self.participant_manager, self.veil_manager)
         self.channel_message_preview_handler = ChannelMessagePreviewHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                                            self.repository)
+                                                                            self.repository, self.participant_manager, self.veil_manager)
         self.ban_menu_handler = BanMenuHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                               self.repository)
+                                               self.repository, self.participant_manager, self.veil_manager)
         self.outgoing_reply_handler = OutgoingReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                           self.repository)
+                                                           self.repository, self.participant_manager, self.veil_manager)
         self.incoming_reply_handler = IncomingReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
-                                                           self.repository)
+                                                           self.repository, self.participant_manager, self.veil_manager)
+        self.notification_handler = NotificationHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                        self.repository, self.participant_manager, self.veil_manager)
 
         self.hook_handler_to_telethon()
 
     def hook_handler_to_telethon(self):
+        @self.telethon_bot.on(events.ChatAction())
+        async def general_chat_action_handler(event):
+            if (hasattr(event.original_update, 'prev_participant') and
+                event.original_update.prev_participant != None):
+                self.participant_manager.remove_participant(event.original_update.prev_participant.user_id)
+            elif (hasattr(event.original_update, 'new_participant') and
+                  event.original_update.new_participant != None):
+                self.participant_manager.add_participant(event.original_update.new_participant.user_id)
+
         @self.telethon_bot.on(events.CallbackQuery())
         async def general_callback_handler(event):
             self.logger.info('Incoming callback!')
@@ -106,6 +135,7 @@ class Bot:
                         await self.frontend.send_state_message(input_sender, 
                                                                'common', 'banned', { 'channel_admin': self.config.channel.admin },
                                                                None, None)
+                        await self.database_manager.commit_connection(db_connection)
                         return
 
                     if inline_type == 'cmp':
@@ -114,6 +144,8 @@ class Bot:
                         await self.outgoing_reply_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
                     elif inline_type == 'ir':
                         await self.incoming_reply_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
+                    elif inline_type == 'n':
+                        await self.notification_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
 
                     await self.database_manager.commit_connection(db_connection)
 
@@ -154,6 +186,7 @@ class Bot:
                         await self.frontend.send_state_message(event.message.input_sender, 
                                                                'common', 'banned', { 'channel_admin': self.config.channel.admin },
                                                                None, None)
+                        await self.database_manager.commit_connection(db_connection)
                         return
 
                     if user_status.state == 'home':
@@ -176,6 +209,16 @@ class Bot:
                         await self.channel_reply_handler.handle(user_status, event, db_connection)
                     elif user_status.state == 'peer_reply':
                         await self.peer_reply_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'direct_admin_id_phase':
+                        await self.direct_admin_id_phase_handler.handle(user_status, event, db_connection)
+                    elif user_status.state == 'direct_admin_message_phase':
+                        await self.direct_admin_message_phase.handle(user_status, event, db_connection)
+                    elif user_status.state == 'my_veils':
+                        await self.my_veils.handle(user_status, event, db_connection)
+                    elif user_status.state == 'redeem_ticket':
+                        await self.redeem_ticket.handle(user_status, event, db_connection)
+                    elif user_status.state == 'veil_menu':
+                        await self.veil_menu.handle(user_status, event, db_connection)
 
                     await self.database_manager.commit_connection(db_connection)
 

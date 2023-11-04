@@ -1,0 +1,18 @@
+{#
+    state: redeem_ticket
+    kws: button_messages, veil_buttons
+#}
+[
+    [
+        {% for veil in veil_buttons %}
+        {% if not loop.last %}
+        "{{ veil.name }}",
+        {% else %}
+        "{{ veil.name }}"
+        {% endif %}
+        {% endfor %}
+    ],
+    [
+        "{{ button_messages['my_veils']['back'] }}"
+    ]
+]

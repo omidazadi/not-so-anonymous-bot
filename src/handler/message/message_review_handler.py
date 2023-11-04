@@ -6,8 +6,8 @@ from handler.message.base_handler import BaseHandler
 from magical_emoji import MagicalEmoji
 
 class MessageReviewHandler(PaginatedPendingListMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         self.magical_emoji = MagicalEmoji()
         
@@ -93,7 +93,7 @@ class MessageReviewHandler(PaginatedPendingListMixin, BaseHandler):
         sender_user_status = await self.repository.user_status.get_user_status(channel_message.from_user, db_connection)
         input_sender = await self.telethon_bot.get_input_entity(int(sender_user_status.user_tid))
         await self.frontend.edit_inline_message(input_sender, channel_message.message_tid, 'channel_message_preview', 'approved', 
-                                                { 'user_status': user_status, 'message': channel_message.message },
+                                                { 'message': channel_message },
                                                 { 'channel_message_id': channel_message.channel_message_id })
         await self.frontend.send_inline_message(input_sender, 'notification', 'channel_message_approved', 
                                                 {},
@@ -102,7 +102,7 @@ class MessageReviewHandler(PaginatedPendingListMixin, BaseHandler):
 
         input_channel = await self.telethon_bot.get_input_entity(self.config.channel.id)
         await self.frontend.send_channel_message(input_channel, 'anonymous', 
-                                                 { 'user_status': user_status, 'message': channel_message.message, 'channel_id': self.config.channel.id },
+                                                 { 'message': channel_message },
                                                  { 'emoji': self.magical_emoji.get_random_emoji(), 'bot_id': self.config.bot.id, 'channel_message_id': channel_message.channel_message_id},
                                                  media=channel_message.media)
         
@@ -111,5 +111,5 @@ class MessageReviewHandler(PaginatedPendingListMixin, BaseHandler):
         sender_user_status = await self.repository.user_status.get_user_status(channel_message.from_user, db_connection)
         input_sender = await self.telethon_bot.get_input_entity(int(sender_user_status.user_tid))
         await self.frontend.edit_inline_message(input_sender, channel_message.message_tid, 'channel_message_preview', 'rejected', 
-                                                { 'user_status': user_status, 'message': channel_message.message },
+                                                { 'message': channel_message },
                                                 {})

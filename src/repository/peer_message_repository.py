@@ -7,31 +7,31 @@ class PeerMessageRepository:
     def __init__(self):
         self.logger = logging.getLogger('not_so_anonymous')
 
-    async def create_channel_peer_message(self, channel_message_reply, user_id, message, media, db_connection: aiomysql.Connection):
+    async def create_channel_peer_message(self, channel_message_reply, from_user, from_user_veil, message, media, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
 
         now_date = datetime.utcnow()
         sql_statement = """
-            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, message_status, sent_at, is_reported, is_report_reviewed)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_notification_tid, to_message_tid, from_user, from_user_veil, message, media, message_status, sent_at, is_reported, is_report_reviewed)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = (channel_message_reply, None, '?', '?', user_id, message, media, 'w', now_date, False, False)
+        values = (channel_message_reply, None, '?', '?', '?', from_user, from_user_veil, message, media, 'w', now_date, False, False)
         await cursor.execute(sql_statement, values)
         peer_message_id = cursor.lastrowid
         await cursor.close()
         return peer_message_id
     
-    async def create_peer_peer_message(self, peer_message_reply, user_id, message, media, db_connection: aiomysql.Connection):
+    async def create_peer_peer_message(self, peer_message_reply, from_user, from_user_veil, message, media, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
 
         now_date = datetime.utcnow()
         sql_statement = """
-            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_message_tid, from_user, message, media, message_status, sent_at, is_reported, is_report_reviewed)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_notification_tid, to_message_tid, from_user, from_user_veil, message, media, message_status, sent_at, is_reported, is_report_reviewed)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = (None, peer_message_reply, '?', '?', user_id, message, media, 'w', now_date, False, False)
+        values = (None, peer_message_reply, '?', '?', '?', from_user, from_user_veil, message, media, 'w', now_date, False, False)
         await cursor.execute(sql_statement, values)
         peer_message_id = cursor.lastrowid
         await cursor.close()
@@ -84,6 +84,17 @@ class PeerMessageRepository:
             UPDATE peer_message SET from_message_tid = %s WHERE peer_message_id = %s;
         """
         values = (from_message_tid, peer_message_id)
+        await cursor.execute(sql_statement, values)
+        await cursor.close()
+
+    async def set_to_notification_tid(self, peer_message_id, to_notification_tid, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            UPDATE peer_message SET to_notification_tid = %s WHERE peer_message_id = %s;
+        """
+        values = (to_notification_tid, peer_message_id)
         await cursor.execute(sql_statement, values)
         await cursor.close()
 
@@ -233,3 +244,16 @@ class PeerMessageRepository:
         result = await cursor.fetchall()
         await cursor.close()
         return PeerMessage.cook(result)
+    
+    async def get_no_user_peer_messages(self, user_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            SELECT COUNT(*) FROM peer_message WHERE from_user = %s;
+        """
+        values = (user_id)
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchone()
+        await cursor.close()
+        return result[0]

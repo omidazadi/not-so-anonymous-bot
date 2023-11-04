@@ -1,0 +1,21 @@
+{#
+    state: my_veils
+    kws: button_messages, veil_button_rows
+#}
+[
+    {% for row in veil_button_rows %}
+    {% if row | length == 1 %}
+    [
+        "{{ row[0] }}"
+    ],
+    {% else %}
+    [
+        "{{ row[0] }}",
+        "{{ row[1] }}"
+    ],
+    {% endif %}
+    {% endfor %}
+    [
+        "{{ button_messages['my_veils']['back'] }}"
+    ]
+]

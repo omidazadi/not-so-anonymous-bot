@@ -2,9 +2,9 @@
     "home": {
         "hidden_start": "/start",
         "hidden_admin": "پیس پیس",
-        "send_message": "ارسال پیام ناشناس 📜",
-        "put_on_veil": "نقاب بذار 👹",
-        "take_off_veil": "نقابت رو بردار 👹",
+        "send_anonymous": "ارسال پیام ناشناس 📜",
+        "send_public": "ارسال پیام همگانی 📢",
+        "my_veils": "نقاب‌های من 👹",
         "talk_to_admin": "گفت‌وگو با ادمین 👨‍💻",
         "unblock_all": "آزادی همه‌ی بلاک‌شده‌ها 🕊"
     },
@@ -29,7 +29,12 @@
         "pending_list": "فهرست پیام‌های بازبینی‌نشده 🗃️",
         "show_report": "نمایش آخرین گزارش 🖊",
         "veil_menu": "منوی نقاب 👹",
-        "ban_menu": "منوی بن ⛔"
+        "ban_menu": "منوی بن ⛔",
+        "direct_admin": "پیام مستقیم ادمین 👨‍💻"
+    },
+    "veil_menu": {
+        "hidden_start": "/start",
+        "back": "برگشت 🔙"
     },
     "ban_menu": {
         "hidden_start": "/start",
@@ -54,5 +59,21 @@
     "peer_reply": {
         "hidden_start": "/start",
         "discard": "لغو 🔙"
+    },
+    "direct_admin_id_phase": {
+        "hidden_start": "/start",
+        "discard": "لغو 🔙"
+    },
+    "direct_admin_message_phase": {
+        "hidden_start": "/start",
+        "discard": "لغو 🔙"
+    },
+    "my_veils": {
+        "hidden_start": "/start",
+        "back": "برگشت 🔙"
+    },
+    "redeem_ticket": {
+        "hidden_start": "/start",
+        "back": "برگشت 🔙"
     }
 }

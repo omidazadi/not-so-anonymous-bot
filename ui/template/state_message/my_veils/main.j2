@@ -1,0 +1,19 @@
+{#
+    state: my_veils
+    edge: main
+    kws: veils, chosen_veil
+#}
+اینجا کمد نقاب‌های توئه. نقابی که می‌خوای به چهره بزنی رو بردار. 🚪👹
+
+{% if chosen_veil == None %}
+1. **ناشناس**
+{% else %}
+1. ناشناس
+{% endif %}
+{% for veil in veils %}
+{% if chosen_veil == veil.name %}
+{{ loop.index + 1}}. **{{ veil.name }}**
+{% else %}
+{{ loop.index + 1 }}. {{ veil.name }}
+{% endif %}
+{% endfor %}

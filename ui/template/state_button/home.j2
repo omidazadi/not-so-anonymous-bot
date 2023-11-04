@@ -4,10 +4,11 @@
 #}
 [
     [
-        "{{ button_messages['home']['send_message'] }}"
+        "{{ button_messages['home']['send_public'] }}",
+        "{{ button_messages['home']['send_anonymous'] }}"
     ],
     [
-        {%+ if not user_status.is_veiled %}"{{ button_messages['home']['put_on_veil'] }}"{% else %}"{{ button_messages['home']['take_off_veil'] }}"{% endif %},
+        "{{ button_messages['home']['my_veils'] }}",
         "{{ button_messages['home']['unblock_all'] }}"
     ],
     [

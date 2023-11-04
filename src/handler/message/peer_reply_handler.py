@@ -6,8 +6,8 @@ from handler.message.base_handler import BaseHandler
 from mixin.message_and_media_mixin import MessageAndMediaMixin
 
 class PeerReplyHandler(MessageAndMediaMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):
@@ -45,11 +45,17 @@ class PeerReplyHandler(MessageAndMediaMixin, BaseHandler):
             media_stream = pickle.dumps(media)
             replied_to_peer_message_id = int(user_status.extra.split(',')[1])
             replied_to_peer_message = await self.repository.peer_message.get_peer_message(replied_to_peer_message_id, db_connection)
-            reply_message_id = await self.repository.peer_message.create_peer_peer_message(replied_to_peer_message_id, user_status.user_id, message, media_stream, db_connection)
+            original_message = None
+            if replied_to_peer_message.channel_message_reply != None:
+                original_message = await self.repository.channel_message.get_channel_message(replied_to_peer_message.channel_message_reply, db_connection)
+            else:
+                original_message = await self.repository.peer_message.get_peer_message(replied_to_peer_message.peer_message_reply, db_connection)
+            reply_message_id = await self.repository.peer_message.create_peer_peer_message(replied_to_peer_message_id, user_status.user_id, original_message.from_user_veil, message, media_stream, db_connection)
+            reply_message = await self.repository.peer_message.get_peer_message(reply_message_id, db_connection)
             reply_message_tid_int = await self.frontend.send_inline_message(input_sender, 'outgoing_reply', 'waiting', 
-                                                                           { 'user_status': user_status, 'message': message },
-                                                                           { 'peer_message_id': reply_message_id },
-                                                                           media=media, reply_to=replied_to_peer_message.to_message_tid)
+                                                                            { 'message': reply_message },
+                                                                            { 'peer_message_id': reply_message_id },
+                                                                            media=media, reply_to=replied_to_peer_message.to_message_tid)
             if reply_message_tid_int == None:
                 (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
                 (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
@@ -68,5 +74,4 @@ class PeerReplyHandler(MessageAndMediaMixin, BaseHandler):
                 await self.repository.user_status.set_user_status(user_status, db_connection)
                 await self.frontend.send_state_message(input_sender, 
                                                        'peer_reply', 'confirmation', {},
-                                                       return_button_state, return_button_kws,
-                                                       reply_to=str(reply_message_tid_int))
+                                                       return_button_state, return_button_kws)

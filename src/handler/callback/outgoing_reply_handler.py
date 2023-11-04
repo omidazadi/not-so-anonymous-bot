@@ -6,19 +6,22 @@ from handler.callback.base_handler import BaseHandler
 from mixin.reciever_mixin import RecieverMixin
 
 class OutgoingReplyHandler(RecieverMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
 
     async def handle(self, sender_status: UserStatus, inline_senario, inline_button, data, db_connection: aiomysql.Connection):
         self.logger.info(f'outgoing_reply handler!')
 
         peer_message = await self.repository.peer_message.get_peer_message(int(data), db_connection)
+        if peer_message == None:
+            return
+        
         user_status = await self.repository.user_status.get_user_status(peer_message.from_user, db_connection)
         if sender_status.user_id != user_status.user_id:
             return
         
-        if not await self.is_member_of_channel(user_status.user_tid):
+        if not self.participant_manager.is_a_member(user_status):
             await self.frontend.send_inline_message(input_sender, 'notification', 'must_be_a_member', 
                                                     { 'channel_id': self.config.channel.id },
                                                     {},
@@ -71,15 +74,12 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
                                                                 reply_to=peer_message.from_message_tid)
                         return
                 
-                media = None
-                if peer_message.media != None:
-                    media = pickle.loads(self.config.bot.new_reply_media)
-                to_message_tid_int = await self.frontend.send_inline_message(input_reciever, 'incoming_reply', 'sealed', 
+                to_notification_tid_int = await self.frontend.send_inline_message(input_reciever, 'notification', 'you_have_a_reply', 
                                                                              {},
                                                                              { 'peer_message_id': peer_message.peer_message_id },
-                                                                             reply_to=message_tid, media=media)
+                                                                             reply_to=message_tid)
                 
-                if to_message_tid_int == None:
+                if to_notification_tid_int == None:
                     await self.frontend.send_inline_message(input_sender, 'notification', 'i_am_blocked', 
                                                             {},
                                                             {},
@@ -91,19 +91,13 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
                         if peer_message.peer_message_reply != None:
                             replied_to_peer_message = await self.repository.peer_message.get_peer_message(peer_message.peer_message_reply, db_connection)
                             await self.frontend.edit_inline_message(input_sender, replied_to_peer_message.to_message_tid, 'incoming_reply', 'answered', 
-                                                                    { 'user_status': reciever_status, 'message': replied_to_peer_message.message },
+                                                                    { 'message': replied_to_peer_message },
                                                                     {})
-                        await self.repository.peer_message.set_to_message_tid(peer_message.peer_message_id, str(to_message_tid_int), db_connection)
+                        await self.repository.peer_message.set_to_notification_tid(peer_message.peer_message_id, str(to_notification_tid_int), db_connection)
                         await self.frontend.edit_inline_message(input_sender, peer_message.from_message_tid, 'outgoing_reply', 'sent_not_seen', 
-                                                                { 'user_status': user_status, 'message': peer_message.message },
+                                                                { 'message': peer_message },
                                                                 {})
             elif inline_button == 'd':
                 is_ok = await self.repository.peer_message.delete_the_waiting_peer_message(peer_message.peer_message_id, db_connection)
                 if is_ok:
-                    media = None
-                    if peer_message.media != None:
-                        media = pickle.loads(self.config.bot.discard_media)
-                    await self.frontend.edit_inline_message(input_sender, peer_message.from_message_tid, 'outgoing_reply', 'discarded', 
-                                                            {},
-                                                            {},
-                                                            media=media)
+                    await self.frontend.delete_inline_message(peer_message.from_message_tid)

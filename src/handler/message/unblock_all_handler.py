@@ -4,8 +4,8 @@ from model.user_status import UserStatus
 from handler.message.base_handler import BaseHandler
 
 class UnblockAllHandler(BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):
@@ -17,6 +17,7 @@ class UnblockAllHandler(BaseHandler):
             data = self.parse_hidden_start(event.message.message)
             if data == None:
                 user_status.state = 'home'
+                user_status.extra = None
                 await self.repository.user_status.set_user_status(user_status, db_connection)
                 await self.frontend.send_state_message(input_sender, 
                                                        'home', 'main', { 'user_status': user_status, 'channel_id': self.config.channel.id },
@@ -30,7 +31,7 @@ class UnblockAllHandler(BaseHandler):
                 tail_replies = await self.repository.peer_message.get_tail_replies(blocked_user.blocked, user_status.user_id, db_connection)
                 for tail_reply in tail_replies:
                     await self.frontend.edit_inline_message(input_sender, tail_reply.to_message_tid, 'incoming_reply', 'opened', 
-                                                            { 'user_status': user_status, 'message': tail_reply.message },
+                                                            { 'message': tail_reply },
                                                             { 'peer_message_id': tail_reply.peer_message_id },
                                                             media=tail_reply.media)
             user_status.state = 'home'

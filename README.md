@@ -20,8 +20,6 @@ Then set the following configurations in a file named `.env`:
 | CHANNEL_ID          | Id of the anonymous channel.                                                    |
 | CHANNEL_ADMIN       | Admin's id of the anonymous channel.                                            |
 | BOT_ID              | Id of the bot.                                                                  |
-| BOT_DISCARD_MEDIA   | Hex code of the Telethon media to show in case of discarding a message.         |
-| BOT_NEW_REPLY_MEDIA | Hex code of the Telethon media to show in case of an incoming message.          |
 | MYSQL_DB            | MySQL database name.                                                            |
 | MYSQL_HOST          | Host name of the MySQL database.                                                |
 | MYSQL_PORT          | Port number of the MySQL database.                                              |
