@@ -147,7 +147,7 @@ class VeilRepository:
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
         sql_statement = """
-            SELECT * FROM veil WHERE reservation_status = %s AND category = %s ORDER BY RAND() LIMIT 1 FOR SHARE;
+            SELECT * FROM veil WHERE reservation_status = %s AND category = %s ORDER BY RAND() LIMIT 1 FOR UPDATE;
         """
         values = ('free', category)
         await cursor.execute(sql_statement, values)
