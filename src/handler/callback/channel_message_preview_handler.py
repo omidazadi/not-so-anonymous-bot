@@ -7,8 +7,8 @@ from handler.callback.base_handler import BaseHandler
 from mixin.rate_limit_mixin import RateLimitMixin
 
 class ChannelMessagePreviewHandler(RateLimitMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
 
     async def handle(self, sender_status: UserStatus, inline_senario, inline_button, data, db_connection: aiomysql.Connection):
@@ -28,7 +28,7 @@ class ChannelMessagePreviewHandler(RateLimitMixin, BaseHandler):
                 return
             
             if inline_button == 's':
-                if self.participant_manager.is_a_member(user_status):
+                if await self.is_member_of_channel(user_status):
                     if not await self.is_rate_limited(user_status):
                         is_ok = await self.repository.channel_message.send_the_waiting_channel_message(channel_message.channel_message_id, db_connection)
                         if is_ok:

@@ -4,8 +4,8 @@ from model.user_status import UserStatus
 from handler.message.base_handler import BaseHandler
 
 class DirectAdminIdPhaseHandler(BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):

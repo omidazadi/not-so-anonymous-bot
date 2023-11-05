@@ -6,8 +6,8 @@ from mixin.veil_button_mixin import VeilButtonMixin
 from mixin.rate_limit_mixin import RateLimitMixin
 
 class HomeHandler(VeilButtonMixin, RateLimitMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):
@@ -64,7 +64,7 @@ class HomeHandler(VeilButtonMixin, RateLimitMixin, BaseHandler):
                                                    'common', 'coming_soon', {},
                                                    'home', { 'button_messages': self.button_messages, 'user_status': user_status })
         elif event.message.message == self.button_messages['home']['send_anonymous']:
-            if self.participant_manager.is_a_member(user_status):
+            if await self.is_member_of_channel(user_status):
                 if not await self.is_rate_limited(user_status):
                     user_status.state = 'sending'
                     await self.repository.user_status.set_user_status(user_status, db_connection)

@@ -6,18 +6,17 @@ from repository.repository import Repository
 from frontend import Frontend
 from config import Config
 from constant import Constant
-from participant_manager import ParticipantManager
 from veil_manager import VeilManager
+from mixin.member_check_mixin import MemberCheckMixin
 
-class BaseHandler:
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
+class BaseHandler(MemberCheckMixin):
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, veil_manager):
         self.config: Config = config
         self.constant: Constant = constant
         self.telethon_bot: TelegramClient = telethon_bot
         self.button_messages = button_messages
         self.frontend: Frontend = frontend
         self.repository: Repository = repository
-        self.participant_manager: ParticipantManager = participant_manager
         self.veil_manager: VeilManager = veil_manager
         
     async def handle(self, user_status: UserStatus, event, db_connection: aiomysql.Connection):
@@ -32,7 +31,7 @@ class BaseHandler:
         user_status.state = 'channel_reply'
         user_status.extra = f'{prev_state},{channel_message_id_str}'
 
-        if self.participant_manager.is_a_member(user_status):
+        if await self.is_member_of_channel(user_status):
             channel_message = (await self.repository.channel_message.get_channel_message(int(channel_message_id_str), db_connection)
                                if channel_message_id_str.isnumeric() else None)
             if channel_message == None or channel_message.verdict != 'a':

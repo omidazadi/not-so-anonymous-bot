@@ -6,8 +6,8 @@ from handler.message.base_handler import BaseHandler
 from magical_emoji import MagicalEmoji
 
 class MessageReviewHandler(PaginatedPendingListMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
         self.magical_emoji = MagicalEmoji()
         

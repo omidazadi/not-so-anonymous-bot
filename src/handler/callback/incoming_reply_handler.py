@@ -6,8 +6,8 @@ from handler.callback.base_handler import BaseHandler
 from mixin.reciever_mixin import RecieverMixin
 
 class IncomingReplyHandler(RecieverMixin, BaseHandler):
-    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager):
-        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, participant_manager, veil_manager)
+    def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, veil_manager):
+        super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
 
     async def handle(self, sender_status: UserStatus, inline_senario, inline_button, data, db_connection: aiomysql.Connection):
@@ -128,7 +128,7 @@ class IncomingReplyHandler(RecieverMixin, BaseHandler):
             await self.repository.user_status.set_user_status(user_status, db_connection)
             return
 
-        if not self.participant_manager.is_a_member(user_status):
+        if not await self.is_member_of_channel(user_status):
             (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
             user_status.state = user_status.extra.split(',')[0]
             user_status.extra = None
