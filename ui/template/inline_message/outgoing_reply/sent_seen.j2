@@ -3,7 +3,7 @@
     senario: sent_seen
     kws: message
 #}
-[پیام تو] **{% if not message.from_user_veil %}ناشناس{% else %}{{ message.from_user_veil }}{% endif %}**
+[پیام تو] **{% if not message.from_user_veil %}ناشناس{% else %}★ {{ message.from_user_veil }}{% endif %}**
 {% if message.message != '' %}
 
 {{ message.message }}
