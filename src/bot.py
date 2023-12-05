@@ -163,7 +163,8 @@ class Bot:
                         db_connection = await self.database_manager.open_connection()
                         try:
                             channel_message = await self.repository.channel_message.get_channel_message_by_channel_message_tid(event.message.fwd_from.saved_from_msg_id, db_connection)
-                            await self.repository.channel_message.set_discussion_message_tid(channel_message.channel_message_id, event.message.id, db_connection)
+                            if channel_message != None:
+                                await self.repository.channel_message.set_discussion_message_tid(channel_message.channel_message_id, event.message.id, db_connection)
                             await self.database_manager.commit_connection(db_connection)
                         except Exception as e:
                             await self.database_manager.rollback_connection(db_connection)
