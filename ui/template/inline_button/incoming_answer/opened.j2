@@ -1,0 +1,23 @@
+{#
+    type: incoming_answer
+    senario: opened
+    kws: answer_message_id
+#}
+[
+    [
+        {
+            "text": "در کامنت قرار بده 💚",
+            "data": "ia,o,a,{{ answer_message_id }}"
+        }
+    ],
+    [
+        {
+            "text": "بلاک 🚫",
+            "data": "ia,o,b,{{ answer_message_id }}"
+        },
+        {
+            "text": "گزارش 🖊",
+            "data": "ia,o,r,{{ answer_message_id }}"
+        }
+    ]
+]

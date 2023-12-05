@@ -25,6 +25,8 @@ from handler.message.redeem_ticket_handler import RedeemTicketHandler
 from handler.callback.channel_message_preview_handler import ChannelMessagePreviewHandler
 from handler.callback.outgoing_reply_handler import OutgoingReplyHandler
 from handler.callback.incoming_reply_handler import IncomingReplyHandler
+from handler.callback.outgoing_answer_handler import OutgoingAnswerHandler
+from handler.callback.incoming_answer_handler import IncomingAnswersHandler
 from handler.callback.notification_handler import NotificationHandler
 from config import Config
 from constant import Constant
@@ -88,6 +90,10 @@ class Bot:
                                                            self.repository, self.veil_manager)
         self.incoming_reply_handler = IncomingReplyHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
                                                            self.repository, self.veil_manager)
+        self.outgoing_answer_handler = OutgoingAnswerHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                             self.repository, self.veil_manager)
+        self.incoming_answer_handler = IncomingAnswersHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
+                                                             self.repository, self.veil_manager)
         self.notification_handler = NotificationHandler(self.config, self.constant, self.telethon_bot, self.button_messages, self.frontend,
                                                         self.repository, self.veil_manager)
 
@@ -132,6 +138,10 @@ class Bot:
                         await self.outgoing_reply_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
                     elif inline_type == 'ir':
                         await self.incoming_reply_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
+                    elif inline_type == 'oa':
+                        await self.outgoing_answer_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
+                    elif inline_type == 'ia':
+                        await self.incoming_answer_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
                     elif inline_type == 'n':
                         await self.notification_handler.handle(user_status, inline_senario, inline_button, data, db_connection)
 
@@ -145,8 +155,22 @@ class Bot:
         @self.telethon_bot.on(events.NewMessage())
         async def general_message_handler(event):
             self.logger.info('Incoming message!')
-
-            if not hasattr(event.message.peer_id, 'user_id'):
+            
+            if hasattr(event.message.peer_id, 'channel_id'):
+                if (event.message.peer_id.channel_id == (await self.telethon_bot.get_entity(self.config.channel.discussion)).id and
+                    event.message.fwd_from != None and hasattr(event.message.fwd_from.from_id, 'channel_id') and 
+                    event.message.fwd_from.from_id.channel_id == (await self.telethon_bot.get_entity(self.config.channel.id)).id):
+                        db_connection = await self.database_manager.open_connection()
+                        try:
+                            channel_message = await self.repository.channel_message.get_channel_message_by_channel_message_tid(event.message.fwd_from.saved_from_msg_id, db_connection)
+                            await self.repository.channel_message.set_discussion_message_tid(channel_message.channel_message_id, event.message.id, db_connection)
+                            await self.database_manager.commit_connection(db_connection)
+                        except Exception as e:
+                            await self.database_manager.rollback_connection(db_connection)
+                            await self.frontend.send_state_message(event.message.input_sender, 
+                                                                   'common', 'internal_error', {},
+                                                                   None, None)
+                            raise e 
                 return
             
             if self.config.app.maintenance:

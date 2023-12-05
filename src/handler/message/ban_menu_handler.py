@@ -14,10 +14,11 @@ class BanMenuHandler(BaseHandler):
         input_sender = event.message.input_sender
         if (event.message.message == self.button_messages['ban_menu']['hidden_start'] or
             event.message.message.startswith(self.button_messages['ban_menu']['hidden_start'] + ' ')):
-            data = self.parse_hidden_start(event.message.message)
-            if data == None:
+            reply_type, channel_message_id_str = self.parse_hidden_start(event.message.message)
+            if reply_type == None:
                 no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
-                no_reports = await self.repository.peer_message.get_no_reports(db_connection)
+                no_reports = ((await self.repository.peer_message.get_no_reports(db_connection)) + 
+                              (await self.repository.answer_message.get_no_reports(db_connection)))
                 user_status.state = 'admin_home'
                 user_status.extra = None
                 await self.repository.user_status.set_user_status(user_status, db_connection)
@@ -25,10 +26,11 @@ class BanMenuHandler(BaseHandler):
                                                        'admin_home', 'main', { 'no_pending_messages': no_pending_messages, 'no_reports': no_reports },
                                                        'admin_home', { 'button_messages': self.button_messages })
             else:
-                await self.goto_channel_reply_state(input_sender, 'admin_home', data, user_status, db_connection)
+                await self.goto_channel_reply_state(input_sender, 'admin_home', channel_message_id_str, reply_type, user_status, db_connection)
         elif event.message.message == self.button_messages['ban_menu']['back']:
             no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
-            no_reports = await self.repository.peer_message.get_no_reports(db_connection)
+            no_reports = ((await self.repository.peer_message.get_no_reports(db_connection)) + 
+                          (await self.repository.answer_message.get_no_reports(db_connection)))
             user_status.state = 'admin_home'
             await self.repository.user_status.set_user_status(user_status, db_connection)
             await self.frontend.send_state_message(input_sender, 

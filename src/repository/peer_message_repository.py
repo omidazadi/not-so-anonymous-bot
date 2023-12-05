@@ -13,10 +13,10 @@ class PeerMessageRepository:
 
         now_date = datetime.utcnow()
         sql_statement = """
-            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_notification_tid, to_message_tid, from_user, from_user_veil, message, media, message_status, sent_at, is_reported, is_report_reviewed)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, answer_message_reply, from_message_tid, to_notification_tid, to_message_tid, from_user, from_user_veil, message, media, message_status, sent_at, is_reported, is_report_reviewed)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = (channel_message_reply, None, '?', '?', '?', from_user, from_user_veil, message, media, 'w', now_date, False, False)
+        values = (channel_message_reply, None, None, '?', '?', '?', from_user, from_user_veil, message, media, 'w', now_date, False, False)
         await cursor.execute(sql_statement, values)
         peer_message_id = cursor.lastrowid
         await cursor.close()
@@ -28,10 +28,25 @@ class PeerMessageRepository:
 
         now_date = datetime.utcnow()
         sql_statement = """
-            INSERT INTO peer_message (channel_message_reply, peer_message_reply, from_message_tid, to_notification_tid, to_message_tid, from_user, from_user_veil, message, media, message_status, sent_at, is_reported, is_report_reviewed)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, answer_message_reply, from_message_tid, to_notification_tid, to_message_tid, from_user, from_user_veil, message, media, message_status, sent_at, is_reported, is_report_reviewed)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         """
-        values = (None, peer_message_reply, '?', '?', '?', from_user, from_user_veil, message, media, 'w', now_date, False, False)
+        values = (None, peer_message_reply, None, '?', '?', '?', from_user, from_user_veil, message, media, 'w', now_date, False, False)
+        await cursor.execute(sql_statement, values)
+        peer_message_id = cursor.lastrowid
+        await cursor.close()
+        return peer_message_id
+    
+    async def create_answer_peer_message(self, answer_message_reply, from_user, from_user_veil, message, media, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        now_date = datetime.utcnow()
+        sql_statement = """
+            INSERT INTO peer_message (channel_message_reply, peer_message_reply, answer_message_reply, from_message_tid, to_notification_tid, to_message_tid, from_user, from_user_veil, message, media, message_status, sent_at, is_reported, is_report_reviewed)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """
+        values = (None, None, answer_message_reply, '?', '?', '?', from_user, from_user_veil, message, media, 'w', now_date, False, False)
         await cursor.execute(sql_statement, values)
         peer_message_id = cursor.lastrowid
         await cursor.close()
@@ -117,6 +132,19 @@ class PeerMessageRepository:
             SELECT COUNT(*) FROM peer_message WHERE channel_message_reply = %s AND from_user = %s AND (message_status = "z" OR message_status = "s");
         """
         values = (channel_message_id, user_id)
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchone()
+        await cursor.close()
+        return result[0]
+    
+    async def get_no_replies_to_answers(self, answer_message_id, user_id, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+
+        sql_statement = """
+            SELECT COUNT(*) FROM peer_message WHERE answer_message_reply = %s AND from_user = %s AND (message_status = "z" OR message_status = "s");
+        """
+        values = (answer_message_id, user_id)
         await cursor.execute(sql_statement, values)
         result = await cursor.fetchone()
         await cursor.close()
@@ -238,8 +266,15 @@ class PeerMessageRepository:
                     SELECT 1 FROM peer_message pm3 WHERE pm3.peer_message_reply = pm1.peer_message_id 
                 )
             )
+            UNION
+            (
+                SELECT pm1.* FROM peer_message pm1 INNER JOIN answer_message pm2 on pm1.answer_message_reply = pm2.answer_message_id
+                WHERE pm1.message_status = "s" AND pm1.from_user = %s AND pm2.from_user = %s AND NOT EXISTS (
+                    SELECT 1 FROM peer_message pm3 WHERE pm3.peer_message_reply = pm1.peer_message_id 
+                )
+            )
         """
-        values = (sender_user_id, reciever_user_id, sender_user_id, reciever_user_id,)
+        values = (sender_user_id, reciever_user_id, sender_user_id, reciever_user_id, sender_user_id, reciever_user_id,)
         await cursor.execute(sql_statement, values)
         result = await cursor.fetchall()
         await cursor.close()

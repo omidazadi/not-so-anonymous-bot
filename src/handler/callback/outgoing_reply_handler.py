@@ -1,5 +1,4 @@
 import logging
-import pickle
 import aiomysql
 from model.user_status import UserStatus
 from handler.callback.base_handler import BaseHandler
@@ -28,7 +27,7 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
                                                     reply_to=peer_message.from_message_tid)
             return
         
-        (reciever_status, message_tid) = await self.get_reciever(peer_message, db_connection)
+        (reciever_status, message_tid) = await self.get_peer_reciever(peer_message, db_connection)
         input_reciever = await self.telethon_bot.get_input_entity(int(reciever_status.user_tid))
         input_sender = await self.telethon_bot.get_input_entity(int(user_status.user_tid))
         if inline_senario == 'w':
@@ -66,7 +65,8 @@ class OutgoingReplyHandler(RecieverMixin, BaseHandler):
                                                                 reply_to=peer_message.from_message_tid)
                         return
 
-                    no_replies = await self.repository.peer_message.get_no_replies(channel_message.channel_message_id, user_status.user_id, db_connection)
+                    no_replies = (await self.repository.peer_message.get_no_replies(channel_message.channel_message_id, user_status.user_id, db_connection) + 
+                                  await self.repository.answer_message.get_no_replies(channel_message.channel_message_id, user_status.user_id, db_connection))
                     if no_replies >= self.constant.limit.channel_reply_limit:
                         await self.frontend.send_inline_message(input_sender, 'notification', 'channel_reply_limit_reached', 
                                                                 { 'channel_reply_limit': self.constant.limit.channel_reply_limit },

@@ -4,8 +4,9 @@ from model.user_status import UserStatus
 from model.peer_message import PeerMessage
 from handler.callback.base_handler import BaseHandler
 from mixin.reciever_mixin import RecieverMixin
+from mixin.report_mixin import ReportMixin
 
-class IncomingReplyHandler(RecieverMixin, BaseHandler):
+class IncomingReplyHandler(RecieverMixin, ReportMixin, BaseHandler):
     def __init__(self, config, constant, telethon_bot, button_messages, frontend, repository, veil_manager):
         super().__init__(config, constant, telethon_bot, button_messages, frontend, repository, veil_manager)
         self.logger = logging.getLogger('not_so_anonymous')
@@ -18,7 +19,7 @@ class IncomingReplyHandler(RecieverMixin, BaseHandler):
             return
         
         user_status = await self.repository.user_status.get_user_status(peer_message.from_user, db_connection)
-        (reciever_status, message_tid) = await self.get_reciever(peer_message, db_connection)
+        (reciever_status, message_tid) = await self.get_peer_reciever(peer_message, db_connection)
         if sender_status.user_id != reciever_status.user_id:
             return
         
@@ -59,11 +60,17 @@ class IncomingReplyHandler(RecieverMixin, BaseHandler):
                 await self.goto_peer_reply_state(input_reciever, peer_message, reciever_status, db_connection)
             elif inline_button == 'b':
                 await self.repository.block.block(reciever_status.user_id, user_status.user_id, db_connection)
-                tail_replies = await self.repository.peer_message.get_tail_replies(user_status.user_id, reciever_status.user_id, db_connection)
-                for tail_reply in tail_replies:
+                peer_tail_replies = await self.repository.peer_message.get_tail_replies(user_status.user_id, reciever_status.user_id, db_connection)
+                for tail_reply in peer_tail_replies:
                     await self.frontend.edit_inline_message(input_reciever, tail_reply.to_message_tid, 'incoming_reply', 'opened_blocked', 
                                                             { 'message': tail_reply },
                                                             { 'peer_message_id': tail_reply.peer_message_id },
+                                                            media=tail_reply.media)
+                answer_tail_replies = await self.repository.answer_message.get_tail_replies(user_status.user_id, reciever_status.user_id, db_connection)
+                for tail_reply in answer_tail_replies:
+                    await self.frontend.edit_inline_message(input_sender, tail_reply.to_message_tid, 'incoming_answer', 'opened_blocked', 
+                                                            { 'message': tail_reply },
+                                                            { 'answer_message_id': tail_reply.answer_message_id },
                                                             media=tail_reply.media)
                 await self.frontend.send_inline_message(input_reciever, 'notification', 'successfully_blocked', 
                                                         {},
@@ -89,11 +96,17 @@ class IncomingReplyHandler(RecieverMixin, BaseHandler):
             
             if inline_button == 'u':
                 await self.repository.block.unblock(reciever_status.user_id, user_status.user_id, db_connection)
-                tail_replies = await self.repository.peer_message.get_tail_replies(user_status.user_id, reciever_status.user_id, db_connection)
-                for tail_reply in tail_replies:
+                peer_tail_replies = await self.repository.peer_message.get_tail_replies(user_status.user_id, reciever_status.user_id, db_connection)
+                for tail_reply in peer_tail_replies:
                     await self.frontend.edit_inline_message(input_reciever, tail_reply.to_message_tid, 'incoming_reply', 'opened', 
                                                             { 'message': tail_reply },
                                                             { 'peer_message_id': tail_reply.peer_message_id },
+                                                            media=tail_reply.media)
+                answer_tail_replies = await self.repository.answer_message.get_tail_replies(user_status.user_id, reciever_status.user_id, db_connection)
+                for tail_reply in answer_tail_replies:
+                    await self.frontend.edit_inline_message(input_sender, tail_reply.to_message_tid, 'incoming_answer', 'opened', 
+                                                            { 'message': tail_reply },
+                                                            { 'answer_message_id': tail_reply.answer_message_id },
                                                             media=tail_reply.media)
                 await self.frontend.send_inline_message(input_reciever, 'notification', 'successfully_unblocked', 
                                                         {},
@@ -169,15 +182,3 @@ class IncomingReplyHandler(RecieverMixin, BaseHandler):
             return ('home', { 'button_messages': self.button_messages, 'user_status': user_status })
         else:
             return ('admin_home', { 'button_messages': self.button_messages })
-        
-    async def notify_admins_new_report(self, db_connection: aiomysql.Connection):
-        admin_states = ['admin_home', 'pending_list', 'message_review', 'ban_menu']
-        admin_users = await self.repository.user_status.get_admin_users(db_connection)
-        for admin_user in admin_users:
-            if (admin_user.state in admin_states or
-                (admin_user.state == 'channel_reply' and admin_user.extra.split(',')[0] == 'admin_home') or
-                (admin_user.state == 'peer_reply' and admin_user.extra.split(',')[0] == 'admin_home')):
-                input_user = await self.telethon_bot.get_input_entity(int(admin_user.user_tid))
-                await self.frontend.send_inline_message(input_user, 'notification', 'admin_new_report', 
-                                                        {},
-                                                        {})

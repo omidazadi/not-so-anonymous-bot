@@ -17,10 +17,11 @@ class MessageReviewHandler(PaginatedPendingListMixin, BaseHandler):
         input_sender = event.message.input_sender
         if (event.message.message == self.button_messages['message_review']['hidden_start'] or
             event.message.message.startswith(self.button_messages['message_review']['hidden_start'] + ' ')):
-            data = self.parse_hidden_start(event.message.message)
-            if data == None:
+            reply_type, channel_message_id_str = self.parse_hidden_start(event.message.message)
+            if reply_type == None:
                 no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
-                no_reports = await self.repository.peer_message.get_no_reports(db_connection)
+                no_reports = ((await self.repository.peer_message.get_no_reports(db_connection)) + 
+                              (await self.repository.answer_message.get_no_reports(db_connection)))
                 user_status.state = 'admin_home'
                 user_status.extra = None
                 await self.repository.user_status.set_user_status(user_status, db_connection)
@@ -28,7 +29,7 @@ class MessageReviewHandler(PaginatedPendingListMixin, BaseHandler):
                                                        'admin_home', 'main', { 'no_pending_messages': no_pending_messages, 'no_reports': no_reports },
                                                        'admin_home', { 'button_messages': self.button_messages })
             else:
-                await self.goto_channel_reply_state(input_sender, 'admin_home', data, user_status, db_connection)
+                await self.goto_channel_reply_state(input_sender, 'admin_home', channel_message_id_str, reply_type, user_status, db_connection)
         elif event.message.message == self.button_messages['message_review']['back']:
             user_status.state = 'pending_list'
             user_status.extra = user_status.extra.split(',')[1]
@@ -100,11 +101,19 @@ class MessageReviewHandler(PaginatedPendingListMixin, BaseHandler):
                                                 {},
                                                 reply_to=channel_message.message_tid)
 
-        input_channel = await self.telethon_bot.get_input_entity(self.config.channel.id)
-        await self.frontend.send_channel_message(input_channel, 'anonymous', 
-                                                 { 'message': channel_message },
-                                                 { 'emoji': self.magical_emoji.get_random_emoji(), 'bot_id': self.config.bot.id, 'channel_message_id': channel_message.channel_message_id},
-                                                 media=channel_message.media)
+        input_channel, channel_message_tid = await self.telethon_bot.get_input_entity(self.config.channel.id), '?'
+        if channel_message.is_public:
+            channel_message_tid = await self.frontend.send_channel_message(input_channel, 'public', 
+                                                                           { 'message': channel_message, 'emoji': self.magical_emoji.get_random_emoji(), 'bot_id': self.config.bot.id },
+                                                                           {},
+                                                                           media=channel_message.media)
+        else:
+            channel_message_tid = await self.frontend.send_channel_message(input_channel, 'anonymous', 
+                                                                           { 'message': channel_message },
+                                                                           { 'emoji': self.magical_emoji.get_random_emoji(), 'bot_id': self.config.bot.id, 'channel_message_id': channel_message.channel_message_id},
+                                                                           media=channel_message.media)
+        
+        await self.repository.channel_message.set_channel_message_tid(channel_message.channel_message_id, channel_message_tid, db_connection)
         
     async def reject_channel_message(self, channel_message_id, user_status: UserStatus, db_connection: aiomysql.Connection):
         channel_message = await self.repository.channel_message.get_channel_message(channel_message_id, db_connection)

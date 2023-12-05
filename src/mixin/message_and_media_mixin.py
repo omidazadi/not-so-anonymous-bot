@@ -11,6 +11,8 @@ class MessageAndMediaMixin:
             elif (hasattr(event.message.media, 'document') and 
                   not self.is_sticker(event.message.media)):
                 media = event.message.media.document
+            elif hasattr(event.message.media, 'webpage'):
+                pass
             else:
                 user_status.state = return_state
                 await self.repository.user_status.set_user_status(user_status, db_connection)
@@ -28,6 +30,7 @@ class MessageAndMediaMixin:
         if (media != None and MessageAndMediaMixin.utf8len(event.message.message) > self.constant.limit.media_message_size or 
             media == None and MessageAndMediaMixin.utf8len(event.message.message) > self.constant.limit.simple_message_size):
             user_status.state = return_state
+            user_status.extra = None
             await self.repository.user_status.set_user_status(user_status, db_connection)
             
             if return_state == 'home':

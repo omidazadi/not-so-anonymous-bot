@@ -16,8 +16,8 @@ class ChannelReplyHandler(MessageAndMediaMixin, BaseHandler):
         input_sender = event.message.input_sender
         if (event.message.message == self.button_messages['channel_reply']['hidden_start'] or
             event.message.message.startswith(self.button_messages['channel_reply']['hidden_start'] + ' ')):
-            data = self.parse_hidden_start(event.message.message)
-            if data == None:
+            reply_type, channel_message_id_str = self.parse_hidden_start(event.message.message)
+            if reply_type == None:
                 (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
                 (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
                 user_status.state = return_state
@@ -27,7 +27,7 @@ class ChannelReplyHandler(MessageAndMediaMixin, BaseHandler):
                                                        return_state, return_edge, return_kws,
                                                        return_button_state, return_button_kws)
             else:
-                await self.goto_channel_reply_state(input_sender, user_status.extra.split(',')[0], data, user_status, db_connection)
+                await self.goto_channel_reply_state(input_sender, user_status.extra.split(',')[0], channel_message_id_str, reply_type, user_status, db_connection)
         elif event.message.message == self.button_messages['channel_reply']['discard']:
             (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
             (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
@@ -43,26 +43,76 @@ class ChannelReplyHandler(MessageAndMediaMixin, BaseHandler):
                 return
             
             media_stream = pickle.dumps(media)
-            channel_message_id = int(user_status.extra.split(',')[1])
-            peer_message_id = await self.repository.peer_message.create_channel_peer_message(channel_message_id, user_status.user_id, user_status.veil, message, media_stream, db_connection)
-            peer_message = await self.repository.peer_message.get_peer_message(peer_message_id, db_connection)
-            from_message_tid_int = await self.frontend.send_inline_message(input_sender, 'outgoing_reply', 'waiting', 
-                                                                           { 'message': peer_message },
-                                                                           { 'peer_message_id': peer_message_id },
-                                                                           media=media)
-            if from_message_tid_int == None:
-                (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
-                (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
-                user_status.state = return_state
-                user_status.extra = None
-                await self.repository.user_status.set_user_status(user_status, db_connection)
+            reply_type = user_status.extra.split(',')[2]
+            if reply_type == 'c':
+                channel_message_id = int(user_status.extra.split(',')[1])
+                peer_message_id = await self.repository.peer_message.create_channel_peer_message(channel_message_id, user_status.user_id, user_status.veil, message, media_stream, db_connection)
+                peer_message = await self.repository.peer_message.get_peer_message(peer_message_id, db_connection)
+                from_message_tid_int = await self.frontend.send_inline_message(input_sender, 'outgoing_reply', 'waiting', 
+                                                                               { 'message': peer_message },
+                                                                               { 'peer_message_id': peer_message_id },
+                                                                               media=media)
+                if from_message_tid_int == None:
+                    (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
+                    (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                    user_status.state = return_state
+                    user_status.extra = None
+                    await self.repository.user_status.set_user_status(user_status, db_connection)
+                else:
+                    await self.repository.peer_message.set_from_message_tid(peer_message_id, str(from_message_tid_int), db_connection)
+                    (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
+                    (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                    user_status.state = return_state
+                    user_status.extra = None
+                    await self.repository.user_status.set_user_status(user_status, db_connection)
+                    await self.frontend.send_state_message(input_sender, 
+                                                           'channel_reply', 'confirmation', {},
+                                                           return_button_state, return_button_kws)
+            elif reply_type == 'p':
+                channel_message_id = int(user_status.extra.split(',')[1])
+                answer_message_id = await self.repository.answer_message.create_answer_message(channel_message_id, user_status.user_id, user_status.veil, message, media_stream, db_connection)
+                answer_message = await self.repository.answer_message.get_answer_message(answer_message_id, db_connection)
+                from_message_tid_int = await self.frontend.send_inline_message(input_sender, 'outgoing_answer', 'waiting', 
+                                                                               { 'message': answer_message },
+                                                                               { 'answer_message_id': answer_message_id },
+                                                                               media=media)
+                if from_message_tid_int == None:
+                    (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
+                    (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                    user_status.state = return_state
+                    user_status.extra = None
+                    await self.repository.user_status.set_user_status(user_status, db_connection)
+                else:
+                    await self.repository.answer_message.set_from_message_tid(answer_message_id, str(from_message_tid_int), db_connection)
+                    (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
+                    (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                    user_status.state = return_state
+                    user_status.extra = None
+                    await self.repository.user_status.set_user_status(user_status, db_connection)
+                    await self.frontend.send_state_message(input_sender, 
+                                                           'channel_reply', 'confirmation', {},
+                                                           return_button_state, return_button_kws)
             else:
-                await self.repository.peer_message.set_from_message_tid(peer_message_id, str(from_message_tid_int), db_connection)
-                (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
-                (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
-                user_status.state = return_state
-                user_status.extra = None
-                await self.repository.user_status.set_user_status(user_status, db_connection)
-                await self.frontend.send_state_message(input_sender, 
-                                                       'channel_reply', 'confirmation', {},
-                                                       return_button_state, return_button_kws)
+                answer_message_id = int(user_status.extra.split(',')[1])
+                peer_message_id = await self.repository.peer_message.create_answer_peer_message(answer_message_id, user_status.user_id, user_status.veil, message, media_stream, db_connection)
+                peer_message = await self.repository.peer_message.get_peer_message(peer_message_id, db_connection)
+                from_message_tid_int = await self.frontend.send_inline_message(input_sender, 'outgoing_reply', 'waiting', 
+                                                                               { 'message': peer_message },
+                                                                               { 'peer_message_id': peer_message_id },
+                                                                               media=media)
+                if from_message_tid_int == None:
+                    (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
+                    (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                    user_status.state = return_state
+                    user_status.extra = None
+                    await self.repository.user_status.set_user_status(user_status, db_connection)
+                else:
+                    await self.repository.peer_message.set_from_message_tid(peer_message_id, str(from_message_tid_int), db_connection)
+                    (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
+                    (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
+                    user_status.state = return_state
+                    user_status.extra = None
+                    await self.repository.user_status.set_user_status(user_status, db_connection)
+                    await self.frontend.send_state_message(input_sender, 
+                                                           'channel_reply', 'confirmation', {},
+                                                           return_button_state, return_button_kws)

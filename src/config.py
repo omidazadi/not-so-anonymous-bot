@@ -17,6 +17,7 @@ class Config:
         def __init__(self):
             self.id: str = os.getenv('CHANNEL_ID')
             self.admin: str = os.getenv('CHANNEL_ADMIN')
+            self.discussion: str = os.getenv('CHANNEL_DISCUSSION')
 
     class Bot:
         def __init__(self):

@@ -16,8 +16,8 @@ class PeerReplyHandler(MessageAndMediaMixin, BaseHandler):
         input_sender = event.message.input_sender
         if (event.message.message == self.button_messages['peer_reply']['hidden_start'] or
             event.message.message.startswith(self.button_messages['peer_reply']['hidden_start'] + ' ')):
-            data = self.parse_hidden_start(event.message.message)
-            if data == None:
+            reply_type, channel_message_id_str = self.parse_hidden_start(event.message.message)
+            if reply_type == None:
                 (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
                 (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
                 user_status.state = return_state
@@ -27,7 +27,7 @@ class PeerReplyHandler(MessageAndMediaMixin, BaseHandler):
                                                        return_state, return_edge, return_kws,
                                                        return_button_state, return_button_kws)
             else:
-                await self.goto_channel_reply_state(input_sender, user_status.extra.split(',')[0], data, user_status, db_connection)
+                await self.goto_channel_reply_state(input_sender, user_status.extra.split(',')[0], channel_message_id_str, reply_type, user_status, db_connection)
         elif event.message.message == self.button_messages['peer_reply']['discard']:
             (return_state, return_edge, return_kws) = await self.get_return_state_for_reply(user_status, db_connection)
             (return_button_state, return_button_kws) = await self.get_return_button_state_for_reply(user_status, db_connection)
@@ -48,8 +48,10 @@ class PeerReplyHandler(MessageAndMediaMixin, BaseHandler):
             original_message = None
             if replied_to_peer_message.channel_message_reply != None:
                 original_message = await self.repository.channel_message.get_channel_message(replied_to_peer_message.channel_message_reply, db_connection)
-            else:
+            elif replied_to_peer_message.peer_message_reply != None:
                 original_message = await self.repository.peer_message.get_peer_message(replied_to_peer_message.peer_message_reply, db_connection)
+            elif replied_to_peer_message.answer_message_reply != None:
+                original_message = await self.repository.answer_message.get_answer_message(replied_to_peer_message.answer_message_reply, db_connection)
             reply_message_id = await self.repository.peer_message.create_peer_peer_message(replied_to_peer_message_id, user_status.user_id, original_message.from_user_veil, message, media_stream, db_connection)
             reply_message = await self.repository.peer_message.get_peer_message(reply_message_id, db_connection)
             reply_message_tid_int = await self.frontend.send_inline_message(input_sender, 'outgoing_reply', 'waiting', 

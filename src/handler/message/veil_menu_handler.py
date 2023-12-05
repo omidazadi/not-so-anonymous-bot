@@ -1,6 +1,9 @@
 import logging
+import io
+import csv
 import aiomysql
 from model.user_status import UserStatus
+from model.veil import Veil
 from handler.message.base_handler import BaseHandler
 
 class VeilMenuHandler(BaseHandler):
@@ -14,10 +17,11 @@ class VeilMenuHandler(BaseHandler):
         input_sender = event.message.input_sender
         if (event.message.message == self.button_messages['veil_menu']['hidden_start'] or
             event.message.message.startswith(self.button_messages['veil_menu']['hidden_start'] + ' ')):
-            data = self.parse_hidden_start(event.message.message)
-            if data == None:
+            reply_type, channel_message_id_str = self.parse_hidden_start(event.message.message)
+            if reply_type == None:
                 no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
-                no_reports = await self.repository.peer_message.get_no_reports(db_connection)
+                no_reports = ((await self.repository.peer_message.get_no_reports(db_connection)) + 
+                              (await self.repository.answer_message.get_no_reports(db_connection)))
                 user_status.state = 'admin_home'
                 user_status.extra = None
                 await self.repository.user_status.set_user_status(user_status, db_connection)
@@ -25,10 +29,11 @@ class VeilMenuHandler(BaseHandler):
                                                        'admin_home', 'main', { 'no_pending_messages': no_pending_messages, 'no_reports': no_reports },
                                                        'admin_home', { 'button_messages': self.button_messages })
             else:
-                await self.goto_channel_reply_state(input_sender, 'admin_home', data, user_status, db_connection)
+                await self.goto_channel_reply_state(input_sender, 'admin_home', channel_message_id_str, reply_type, user_status, db_connection)
         elif event.message.message == self.button_messages['veil_menu']['back']:
             no_pending_messages = await self.repository.channel_message.get_no_pending_messages(db_connection)
-            no_reports = await self.repository.peer_message.get_no_reports(db_connection)
+            no_reports = ((await self.repository.peer_message.get_no_reports(db_connection)) + 
+                          (await self.repository.answer_message.get_no_reports(db_connection)))
             user_status.state = 'admin_home'
             await self.repository.user_status.set_user_status(user_status, db_connection)
             await self.frontend.send_state_message(input_sender, 
@@ -163,6 +168,51 @@ class VeilMenuHandler(BaseHandler):
                                                                    'veil_menu', { 'button_messages': self.button_messages })
                     else:
                         error_code = 1
+            elif tokens[0] == 'search':
+                if len(tokens) == 1:
+                    error_code = 1
+                else:
+                    if tokens[1] == 'veil':
+                        if tokens[2] == 'status' and len(tokens) == 4:
+                            if tokens[3] == 'all':
+                                veils = await self.repository.veil.get_all_veils(db_connection)
+                                await self.frontend.send_state_message_as_xlsx(input_sender, 
+                                                                              'veil_menu', 'veils_csv', { 'csv': self.veils_to_csv(veils) },
+                                                                              'veil_menu', { 'button_messages': self.button_messages })
+                            elif tokens[3] == 'free':
+                                veils = await self.repository.veil.get_veil_by_reservation_status('free', db_connection)
+                                await self.frontend.send_state_message_as_xlsx(input_sender, 
+                                                                              'veil_menu', 'veils_csv', { 'csv': self.veils_to_csv(veils) },
+                                                                              'veil_menu', { 'button_messages': self.button_messages })
+                            elif tokens[3] == 'manually_reserved':
+                                veils = await self.repository.veil.get_veil_by_reservation_status('manually_reserved', db_connection)
+                                await self.frontend.send_state_message_as_xlsx(input_sender, 
+                                                                              'veil_menu', 'veils_csv', { 'csv': self.veils_to_csv(veils) },
+                                                                              'veil_menu', { 'button_messages': self.button_messages })
+                            elif tokens[3] == 'automatically_reserved':
+                                veils = await self.repository.veil.get_veil_by_reservation_status('automatically_reserved', db_connection)
+                                await self.frontend.send_state_message_as_xlsx(input_sender, 
+                                                                              'veil_menu', 'veils_csv', { 'csv': self.veils_to_csv(veils) },
+                                                                              'veil_menu', { 'button_messages': self.button_messages })
+                            elif tokens[3] == 'taken':
+                                veils = await self.repository.veil.get_veil_by_reservation_status('taken', db_connection)
+                                await self.frontend.send_state_message_as_xlsx(input_sender, 
+                                                                              'veil_menu', 'veils_csv', { 'csv': self.veils_to_csv(veils) },
+                                                                              'veil_menu', { 'button_messages': self.button_messages })
+                            else:
+                                error_code = 1
+                        elif self.is_quoted(tokens[2]) and len(tokens) == 3:
+                            veil = await self.repository.veil.get_veil(self.remove_quotation_marks(tokens[2]), db_connection)
+                            if veil == None:
+                                error_code = 2
+                            else:
+                                await self.frontend.send_state_message_as_xlsx(input_sender, 
+                                                                              'veil_menu', 'veils_csv', { 'csv': self.veils_to_csv([veil]) },
+                                                                              'veil_menu', { 'button_messages': self.button_messages })
+                        else:
+                            error_code = 1
+                    else:
+                        error_code = 1
             else:
                 error_code = 1
 
@@ -202,3 +252,12 @@ class VeilMenuHandler(BaseHandler):
     
     def remove_quotation_marks(self, token):
         return token[1:-1]
+    
+    def veils_to_csv(self, veils: list[Veil]):
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['name', 'category', 'reserved_by', 'owned_by', 'reservation_status'])
+        for veil in veils:
+            writer.writerow([veil.name, veil.category, (veil.reserved_by if veil.reserved_by != None else 'None'), (veil.owned_by if veil.owned_by != None else 'None'), veil.reservation_status])
+        return output.getvalue()
+

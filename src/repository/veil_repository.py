@@ -30,6 +30,30 @@ class VeilRepository:
             return None
         return Veil(*result)
     
+    async def get_veil_by_reservation_status(self, reservation_status, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+        sql_statement = """
+            SELECT * FROM veil WHERE reservation_status = %s;
+        """
+        values = (reservation_status)
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchall()
+        await cursor.close()
+        return Veil.cook(result)
+    
+    async def get_all_veils(self, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+        sql_statement = """
+            SELECT * FROM veil;
+        """
+        values = ()
+        await cursor.execute(sql_statement, values)
+        result = await cursor.fetchall()
+        await cursor.close()
+        return Veil.cook(result)
+    
     async def set_veil(self, veil: Veil, db_connection: aiomysql.Connection):
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
@@ -96,9 +120,9 @@ class VeilRepository:
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
         sql_statement = """
-            UPDATE veil SET reservation_status = %s WHERE reservation_status = %s AND name = %s;
+            UPDATE veil SET reservation_status = %s WHERE name = %s;
         """
-        values = ('free', 'manually_reserved', name)
+        values = ('free', name)
         await cursor.execute(sql_statement, values)
         
         is_ok = (True if cursor.rowcount > 0 else False)
@@ -128,6 +152,7 @@ class VeilRepository:
         values = (user_id, 'automatically_reserved')
         await cursor.execute(sql_statement, values)
         result = await cursor.fetchall()
+        await cursor.close()
         return Veil.cook(result)
     
     async def release_automatic_reservations(self, user_id, db_connection: aiomysql.Connection):
@@ -166,4 +191,5 @@ class VeilRepository:
         values = (user_id)
         await cursor.execute(sql_statement, values)
         result = await cursor.fetchall()
+        await cursor.close()
         return Veil.cook(result)

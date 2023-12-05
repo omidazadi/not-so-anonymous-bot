@@ -1,0 +1,14 @@
+{#
+    type: outgoing_answer
+    senario: sent_not_seen
+    kws: message
+#}
+**{% if not message.from_user_veil %}ناشناس{% else %}★ {{ message.from_user_veil }}{% endif %}**
+{% if message.message != '' %}
+
+{{ message.message }}
+
+{% else %}
+
+{% endif %}
+وضعیت پیام: دیده‌نشده 💤

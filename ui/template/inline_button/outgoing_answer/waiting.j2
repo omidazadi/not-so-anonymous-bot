@@ -1,0 +1,17 @@
+{#
+    type: outgoing_answer
+    senario: waiting
+    kws: answer_message_id
+#}
+[
+    [
+        {
+            "text": "بفرست ✅",
+            "data": "oa,w,s,{{ answer_message_id }}"
+        },
+        {
+            "text": "نفرست ❌",
+            "data": "oa,w,d,{{ answer_message_id }}"
+        }
+    ]
+]
