@@ -127,3 +127,16 @@ class UserStatusRepository:
         result = await cursor.fetchall()
         await cursor.close()
         return UserStatus.cook(result)
+    
+    async def take_veil_back(self, veil, db_connection: aiomysql.Connection):
+        self.logger.info('Repository has been accessed!')
+        cursor: aiomysql.Cursor = await db_connection.cursor()
+        sql_statement = """
+            UPDATE user_status SET veil = NULL WHERE veil = %s;
+        """
+        values = (veil,)
+        await cursor.execute(sql_statement, values)
+        
+        is_ok = (True if cursor.rowcount > 0 else False)
+        await cursor.close()
+        return is_ok

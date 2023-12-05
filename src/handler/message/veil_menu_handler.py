@@ -109,9 +109,13 @@ class VeilMenuHandler(BaseHandler):
                             if not is_ok:
                                 error_code = 2 
                             else:
-                                await self.frontend.send_state_message(input_sender, 
-                                                                       'veil_menu', 'veil_free_successful', {},
-                                                                       'veil_menu', { 'button_messages': self.button_messages })
+                                is_ok = await self.repository.user_status.take_veil_back(self.remove_quotation_marks(tokens[2]), db_connection)
+                                if not is_ok:
+                                    error_code = 2 
+                                else:
+                                    await self.frontend.send_state_message(input_sender, 
+                                                                           'veil_menu', 'veil_free_successful', {},
+                                                                           'veil_menu', { 'button_messages': self.button_messages })
                     
                     elif tokens[1] == 'gift':
                         if len(tokens) != 5 or not self.is_quoted(tokens[2]) or tokens[3] != 'to' or not tokens[4].isnumeric():

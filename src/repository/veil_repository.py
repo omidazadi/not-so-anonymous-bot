@@ -120,7 +120,7 @@ class VeilRepository:
         self.logger.info('Repository has been accessed!')
         cursor: aiomysql.Cursor = await db_connection.cursor()
         sql_statement = """
-            UPDATE veil SET reservation_status = %s WHERE name = %s;
+            UPDATE veil SET reserved_by = NULL, owned_by = NULL, reservation_status = %s WHERE name = %s;
         """
         values = ('free', name)
         await cursor.execute(sql_statement, values)
