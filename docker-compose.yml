@@ -1,0 +1,17 @@
+version: '3.3'
+services:
+  db:
+    container_name: nsab-db
+    image: mysql:8.1.0
+    restart: always
+    command: --log-bin-trust-function-creators=1 
+    environment:
+      MYSQL_USER: 'hee'
+      MYSQL_PASSWORD: '13801380'
+      MYSQL_ROOT_PASSWORD: '@dmin'
+    ports:
+      - '3306:3306'
+    volumes:
+      - nsab-mysql:/var/lib/mysql
+volumes:
+  nsab-mysql:
