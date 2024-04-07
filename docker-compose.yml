@@ -1,4 +1,4 @@
-version: '3.3'
+version: '2.4'
 services:
   db:
     container_name: nsab-db
@@ -13,5 +13,6 @@ services:
       - '3306:3306'
     volumes:
       - nsab-mysql:/var/lib/mysql
+    mem_limit: 256m
 volumes:
   nsab-mysql:
